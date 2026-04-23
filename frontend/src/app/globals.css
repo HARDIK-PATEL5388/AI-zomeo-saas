@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Zomeo.ai Global Theme ──────────────────────────────────────────────────
+   Brand: Emerald green  (#16a34a / primary-600)
+   Font:  Inter (loaded via next/font in layout.tsx)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    --color-primary:       #16a34a;
+    --color-primary-hover: #15803d;
+    --color-primary-light: #f0fdf4;
+    --color-primary-ring:  #22c55e;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply text-gray-900 bg-white font-sans;
+  }
+}
+
+@layer components {
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 rounded-lg
+           bg-primary-600 text-white text-sm font-medium
+           hover:bg-primary-700
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-colors;
+  }
+
+  /* Secondary / outline button */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 rounded-lg
+           border border-gray-300 text-gray-700 text-sm font-medium bg-white
+           hover:bg-gray-50
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-colors;
+  }
+
+  /* Text input */
+  .input {
+    @apply w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           placeholder-gray-400 transition-shadow;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200;
+  }
+}

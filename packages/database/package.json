@@ -1,0 +1,12 @@
+{
+  "name": "@zomeo/database",
+  "version": "1.0.0",
+  "scripts": {
+    "migrate": "supabase db push",
+    "seed": "supabase db seed",
+    "reset": "supabase db reset"
+  },
+  "devDependencies": {
+    "supabase": "^1.163.0"
+  }
+}

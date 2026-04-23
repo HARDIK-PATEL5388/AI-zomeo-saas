@@ -1,0 +1,9 @@
+{
+  "name": "@zomeo/utils",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "devDependencies": {
+    "typescript": "^5.4.3"
+  }
+}

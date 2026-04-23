@@ -1,0 +1,746 @@
+
+> @zomeo/api@2.0.0 dev
+> tsx watch src/index.ts
+
+⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Zomeo.ai API running on port 3001
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 90ms
+<-- GET /
+--> GET / [32m200[0m 1ms
+<-- GET /health
+--> GET /health [32m200[0m 1ms
+<-- GET /health
+--> GET /health [32m200[0m 0ms
+<-- GET /
+--> GET / [32m200[0m 1ms
+<-- GET /api/aut4:10:37 PM [tsx] change in ./src\routes\upload.ts Rerunning...
+c⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Zomeo.ai API running on port 3001
+node:events:495
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3001
+    at __node_internal_captureLargerStackTrace (node:internal/errors:496:5)
+    at __node_internal_uvExceptionWithHostPort (node:internal/errors:593:12)
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at Server.listen (node:net:1953:7)
+    at serve (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\@hono+node-server@1.19.14_hono@4.12.14\node_modules\@hono\node-server\dist\index.js:690:10)
+    at import_auth (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\index.ts:79:1)
+    at Object.<anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\index.ts:81:16)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\tsx@4.21.0\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7)
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1844:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+
+Node.js v18.20.8
+4:10:40 PM [tsx] change in ./src\routes\upload.ts Rerunning...
+c⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Zomeo.ai API running on port 3001
+<-- POST /api/auth/login
+--> POST /api/auth/login [32m200[0m 86ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [32m200[0m 5ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [32m200[0m 17ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [32m200[0m 3ms
+/repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 0ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 0ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 2ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 0ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 2ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 3ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 0ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- GET /repertory/sources
+--> GET /repertory/sources [33m404[0m 1ms
+<-- GET /repertory/chapters
+--> GET /repertory/chapters [33m404[0m 1ms
+<-- OPTIONS /auth/register
+--> OPTIONS /auth/register [32m204[0m 0ms
+<-- POST /auth/register
+--> POST /auth/register [33m404[0m 0ms
+<-- GET /health
+--> GET /health [32m200[0m 1ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 73ms
+<-- OPTIONS /api/auth/register
+--> OPTIONS /api/auth/register [32m204[0m 0ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [33m409[0m 22ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [33m409[0m 3ms
+<-- OPTIONS /api/auth/register
+--> OPTIONS /api/auth/register [32m204[0m 0ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 68ms
+<-- OPTIONS /api/auth/register
+--> OPTIONS /api/auth/register [32m204[0m 1ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 62ms
+<-- OPTIONS /api/auth/register
+--> OPTIONS /api/auth/register [32m204[0m 0ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 65ms
+<-- OPTIONS /api/repertory/sources
+--> OPTIONS /api/repertory/sources [32m204[0m 1ms
+<-- OPTIONS /api/repertory/chapters
+--> OPTIONS /api/repertory/chapters [32m204[0m 0ms
+<-- GET /api/repertory/sources
+<-- GET /api/repertory/chapters
+--> GET /api/repertory/sources [32m200[0m 23ms
+--> GET /api/repertory/chapters [32m200[0m 23ms
+<-- OPTIONS /api/repertory/rubrics?chapter_id=c00a6e71-a7c4-4423-b7e5-e18d2f6daf29&parent_id=null
+--> OPTIONS /api/repertory/rubrics?chapter_id=c00a6e71-a7c4-4423-b7e5-e18d2f6daf29&parent_id=null [32m204[0m 1ms
+<-- GET /api/repertory/rubrics?chapter_id=c00a6e71-a7c4-4423-b7e5-e18d2f6daf29&parent_id=null
+--> GET /api/repertory/rubrics?chapter_id=c00a6e71-a7c4-4423-b7e5-e18d2f6daf29&parent_id=null [32m200[0m 22ms
+<-- OPTIONS /api/repertory/rubrics?chapter_id=eb717cdc-b39c-4fdf-8b87-c4d79f8b0fd3&parent_id=null
+--> OPTIONS /api/repertory/rubrics?chapter_id=eb717cdc-b39c-4fdf-8b87-c4d79f8b0fd3&parent_id=null [32m204[0m 1ms
+<-- GET /api/repertory/rubrics?chapter_id=eb717cdc-b39c-4fdf-8b87-c4d79f8b0fd3&parent_id=null
+--> GET /api/repertory/rubrics?chapter_id=eb717cdc-b39c-4fdf-8b87-c4d79f8b0fd3&parent_id=null [32m200[0m 3ms
+<-- OPTIONS /api/repertory/rubrics?chapter_id=ed840c2a-a77d-42ac-bc4b-597c8d0a1a83&parent_id=null
+--> OPTIONS /api/repertory/rubrics?chapter_id=ed840c2a-a77d-42ac-bc4b-597c8d0a1a83&parent_id=null [32m204[0m 0ms
+<-- GET /api/repertory/rubrics?chapter_id=ed840c2a-a77d-42ac-bc4b-597c8d0a1a83&parent_id=null
+--> GET /api/repertory/rubrics?chapter_id=ed840c2a-a77d-42ac-bc4b-597c8d0a1a83&parent_id=null [32m200[0m 3ms
+<-- OPTIONS /api/repertory/rubrics?chapter_id=2b4cf046-4965-4ada-aec8-d3ffbd1f382d&parent_id=null
+--> OPTIONS /api/repertory/rubrics?chapter_id=2b4cf046-4965-4ada-aec8-d3ffbd1f382d&parent_id=null [32m204[0m 0ms
+<-- GET /api/repertory/rubrics?chapter_id=2b4cf046-4965-4ada-aec8-d3ffbd1f382d&parent_id=null
+--> GET /api/repertory/rubrics?chapter_id=2b4cf046-4965-4ada-aec8-d3ffbd1f382d&parent_id=null [32m200[0m 4ms
+<-- OPTIONS /api/repertory/sources
+--> OPTIONS /api/repertory/sources [32m204[0m 1ms
+<-- GET /api/repertory/sources
+<-- OPTIONS /api/analysis/rubrics/demo-case
+--> OPTIONS /api/analysis/rubrics/demo-case [32m204[0m 1ms
+<-- OPTIONS /api/analysis/demo-case
+--> OPTIONS /api/analysis/demo-case [32m204[0m 0ms
+<-- GET /api/analysis/rubrics/demo-case
+<-- GET /api/analysis/demo-case
+--> GET /api/repertory/sources [32m200[0m 8ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/rubrics/demo-case [31m500[0m 15ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/demo-case [31m500[0m 27ms
+<-- GET /api/repertory/sources
+<-- GET /api/analysis/rubrics/demo-case
+<-- GET /api/analysis/demo-case
+--> GET /api/repertory/sources [32m200[0m 5ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/rubrics/demo-case [31m500[0m 8ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/demo-case [31m500[0m 11ms
+<-- GET /api/repertory/sources
+<-- OPTIONS /api/repertory/chapters
+--> OPTIONS /api/repertory/chapters [32m204[0m 1ms
+<-- GET /api/repertory/chapters
+--> GET /api/repertory/sources [32m200[0m 3ms
+--> GET /api/repertory/chapters [32m200[0m 6ms
+<-- OPTIONS /api/reports/revenue
+--> OPTIONS /api/reports/revenue [32m204[0m 1ms
+<-- GET /api/reports/revenue
+<-- OPTIONS /api/books
+--> OPTIONS /api/books [32m204[0m 0ms
+<-- GET /api/books
+<-- OPTIONS /api/repertory/sources
+--> OPTIONS /api/repertory/sources [32m204[0m 1ms
+<-- OPTIONS /api/repertory/chapters
+--> OPTIONS /api/repertory/chapters [32m204[0m 0ms
+<-- GET /api/repertory/sources
+<-- GET /api/repertory/chapters
+--> GET /api/repertory/sources [32m200[0m 4ms
+--> GET /api/repertory/chapters [32m200[0m 19ms
+--> GET /api/reports/revenue [31m500[0m 7s
+--> GET /api/books [31m500[0m 7s
+<-- GET /api/repertory/sources
+<-- OPTIONS /api/analysis/rubrics/demo-case
+--> OPTIONS /api/analysis/rubrics/demo-case [32m204[0m 0ms
+<-- OPTIONS /api/analysis/demo-case
+--> OPTIONS /api/analysis/demo-case [32m204[0m 0ms
+<-- GET /api/analysis/rubrics/demo-case
+--> GET /api/repertory/sources [32m200[0m 9ms
+<-- GET /api/analysis/demo-case
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/rubrics/demo-case [31m500[0m 8ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/demo-case [31m500[0m 8ms
+<-- GET /api/analysis/rubrics/demo-case
+<-- GET /api/analysis/demo-case
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:121:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/rubrics/demo-case [31m500[0m 14ms
+[Zomeo.ai] Unhandled error: error: invalid input syntax for type uuid: "demo-case"
+    at E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\pg@8.20.0\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:93:49)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at PostgresConnection.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\dialect\postgres\postgres-driver.js:105:69)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:37:28
+    at async DefaultConnectionProvider.provideConnection (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\driver\default-connection-provider.js:12:20)
+    at async DefaultQueryExecutor.executeQuery (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-executor\query-executor-base.js:36:16)
+    at async SelectQueryBuilderImpl.execute (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\kysely@0.28.16\node_modules\kysely\dist\cjs\query-builder\select-query-builder.js:320:24)
+    at <anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\routes\analysis.ts:93:19)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17)
+    at tenantMiddleware (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\middleware\tenant.ts:9:3)
+    at async dispatch (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\hono@4.12.14\node_modules\hono\dist\cjs\compose.js:43:17) {
+  length: 141,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $1 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'uuid.c',
+  line: '133',
+  routine: 'string_to_uuid'
+}
+--> GET /api/analysis/demo-case [31m500[0m 14ms
+<-- GET /api/analysis/rubrics/demo-case
+--> GET /api/analysis/rubrics/demo-case [33m401[0m 0ms
+<-- GET /api/analysis/demo-case
+--> GET /api/analysis/demo-case [33m401[0m 1ms
+<-- OPTIONS /api/api/auth/login
+--> OPTIONS /api/api/auth/login [32m204[0m 0ms
+<-- POST /api/api/auth/login
+--> POST /api/api/auth/login [33m401[0m 0ms
+<-- OPTIONS /api/api/auth/login
+--> OPTIONS /api/api/auth/login [32m204[0m 0ms
+<-- POST /api/api/auth/login
+--> POST /api/api/auth/login [33m401[0m 1ms
+<-- OPTIONS /api/api/auth/login
+--> OPTIONS /api/api/auth/login [32m204[0m 0ms
+<-- POST /api/api/auth/login
+--> POST /api/api/auth/login [33m401[0m 0ms
+<-- OPTIONS /api/api/auth/login
+--> OPTIONS /api/api/auth/login [32m204[0m 0ms
+<-- POST /api/api/auth/login
+--> POST /api/api/auth/login [33m401[0m 1ms
+<-- POST /api/auth/login
+--> POST /api/auth/login [32m200[0m 67ms
+<-- POST /api/auth/login
+--> POST /api/auth/login [32m200[0m 60ms
+<-- POST /api/auth/register
+--> POST /api/auth/register [32m201[0m 62ms
+<-- POST /api/auth/login
+--> POST /api/auth/login [32m200[0m 47ms
+<-- OPTIONS /api/auth/login
+--> OPTIONS /api/auth/login [32m204[0m 1ms
+<-- POST /api/auth/login
+--> POST /api/auth/login [32m200[0m 65ms
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 1ms
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 1ms
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+<-- GET /api/upload/sources
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+--> GET /api/upload/sources [31m500[0m 7s
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 0ms
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- GET /api/upload/sources
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+<-- GET /api/admin/stats
+--> GET /api/admin/stats [33m401[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 1ms
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 0ms
+<-- GET /api/admin/jobs
+--> GET /api/admin/jobs [33m401[0m 1ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- OPTIONS /api/upload/sources
+--> OPTIONS /api/upload/sources [32m204[0m 0ms
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+<-- GET /api/upload/sources
+--> GET /api/upload/sources [31m500[0m 7s
+4:10:37 PM [tsx] change in ./src\routes\upload.ts Restarting...
+c⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Zomeo.ai API running on port 3001
+4:10:40 PM [tsx] change in ./src\routes\upload.ts Restarting...
+c⚠️  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Zomeo.ai API running on port 3001
+node:events:495
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3001
+    at __node_internal_captureLargerStackTrace (node:internal/errors:496:5)
+    at __node_internal_uvExceptionWithHostPort (node:internal/errors:593:12)
+    at Server.setupListenHandle [as _listen2] (node:net:1817:16)
+    at listenInCluster (node:net:1865:12)
+    at Server.listen (node:net:1953:7)
+    at serve (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\@hono+node-server@1.19.14_hono@4.12.14\node_modules\@hono\node-server\dist\index.js:690:10)
+    at import_auth (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\index.ts:79:1)
+    at Object.<anonymous> (e:\Hardik\workspace\AI-Zomeo-saas\backend\src\index.ts:81:16)
+    at Module._compile (node:internal/modules/cjs/loader:1364:14)
+    at Object.transformer (E:\Hardik\workspace\AI-Zomeo-saas\node_modules\.pnpm\tsx@4.21.0\node_modules\tsx\dist\register-D46fvsV_.cjs:3:1104)
+    at Module.load (node:internal/modules/cjs/loader:1203:32)
+    at Module._load (node:internal/modules/cjs/loader:1019:12)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:203:29)
+    at ModuleJob.run (node:internal/modules/esm/module_job:195:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:337:24)
+    at async loadESM (node:internal/process/esm_loader:34:7)
+    at async handleMainPromise (node:internal/modules/run_main:106:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1844:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+
+Node.js v18.20.8

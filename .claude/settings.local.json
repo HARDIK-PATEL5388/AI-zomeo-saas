@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node -e \":*)",
+      "Bash(ls D:/Saas/Zomeo/AI-Zomeo-saas/frontend/src/app/\\\\\\(auth\\\\\\)/login/)",
+      "Bash(npm run:*)",
+      "Bash(/dev/null __NEW_LINE_1c4417da60f43ab6__ echo echo '=== All primary-* usages \\(confirming theme applied\\) ===' grep -rh primary-[0-9] D:/Saas/Zomeo/AI-Zomeo-saas/frontend/src/app/admin/login/page.tsx D:/Saas/Zomeo/AI-Zomeo-saas/frontend/src/app/admin/layout.tsx D:/Saas/Zomeo/AI-Zomeo-saas/frontend/src/components/layout/Sidebar.tsx D:/Saas/Zomeo/AI-Zomeo-saas/frontend/src/app/login/page.tsx)",
+      "Bash(curl -s http://localhost:3000/admin/login -o /dev/null -w \"admin/login: %{http_code}\\\\n\")",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"home: %{http_code}\\\\n\")",
+      "Bash(curl -s http://localhost:3001/health -w \"\\\\n\")",
+      "Bash(docker exec postgres-db *)",
+      "Bash(docker stop *)",
+      "Bash(docker rm *)",
+      "Bash(docker volume *)",
+      "Bash(docker run *)",
+      "Bash(npm run *)",
+      "Bash(echo \"started PID $!\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/health)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(netstat -ano)",
+      "Bash(awk '{print $NF}')",
+      "Bash(taskkill //PID 17120 //F)",
+      "Bash(curl -s -o /dev/null -w \"after kill: HTTP %{http_code}\\\\n\" http://localhost:3001/health)",
+      "Bash(npm --prefix \"E:/Hardik/workspace/AI-Zomeo-saas/backend\" run dev)",
+      "Bash(echo \"started $!\")",
+      "Bash(docker start *)",
+      "Bash(disown)",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"clinic_name\":\"Bhargav Clinic\",\"email\":\"bhargav@example.com\",\"password\":\"MySecret123\",\"first_name\":\"Bhargav\",\"last_name\":\"Dhameliya\"}')",
+      "Bash(curl -s -o /dev/null -w \"backend port 3001: HTTP %{http_code}\\\\n\" http://localhost:3001/health)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"clinic_name\":\"hardik\",\"first_name\":\"hardik\",\"last_name\":\"patel\",\"email\":\"hardik@yopmail.com\",\"password\":\"hardik12\"}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"hardik@yopmail.com\",\"password\":\"hardik12\"}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"clinic_name\":\"Hardik Admin Clinic\",\"first_name\":\"Hardik\",\"last_name\":\"Admin\",\"email\":\"hardik@gmail.com\",\"password\":\"Admin@123#\"}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"hardik@gmail.com\",\"password\":\"Admin@123#\"}')"
+    ]
+  }
+}
