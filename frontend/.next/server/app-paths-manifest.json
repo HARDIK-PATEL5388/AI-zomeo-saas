@@ -1,9 +1,8 @@
 {
-  "/not-found": "app/not-found.js",
-  "/login/page": "app/login/page.js",
-  "/(app)/analysis/page": "app/(app)/analysis/page.js",
-  "/admin/login/page": "app/admin/login/page.js",
-  "/admin/page": "app/admin/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
   "/admin/repertory/upload/page": "app/admin/repertory/upload/page.js",
-  "/admin/repertory/jobs/page": "app/admin/repertory/jobs/page.js"
+  "/(app)/patients/page": "app/(app)/patients/page.js",
+  "/(app)/cases/page": "app/(app)/cases/page.js",
+  "/(app)/settings/page": "app/(app)/settings/page.js",
+  "/(app)/repertory/page": "app/(app)/repertory/page.js"
 }

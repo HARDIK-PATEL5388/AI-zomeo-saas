@@ -16,6 +16,7 @@ import { patientsRoutes } from './routes/patients'
 import { aiRoutes } from './routes/ai'
 import { adminRoutes } from './routes/admin'
 import { uploadRoutes } from './routes/upload'
+import { repertoryUploadRoutes } from './routes/repertoryUpload'
 import { remediesRoutes } from './routes/remedies'
 import { billingRoutes } from './routes/billing'
 import { appointmentsRoutes } from './routes/appointments'
@@ -43,6 +44,7 @@ app.get('/', (c) => c.json({ status: 'ok', version: '2.0.0', service: 'Zomeo.ai 
 
 // Public routes (no auth required)
 app.route('/api/auth', authRoutes)
+app.route('/api/repertory-upload', repertoryUploadRoutes)
 
 // Protected routes
 app.use('/api/*', authMiddleware)

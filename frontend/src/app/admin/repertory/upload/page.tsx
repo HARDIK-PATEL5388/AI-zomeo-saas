@@ -22,6 +22,7 @@ const REQUIRED_FILES = [
   { name: 'Pagerefs.tab', desc: 'Page references', size: '~1.7 MB' },
   { name: 'LibraryIndex.tab', desc: 'Literature references', size: '~1.1 MB' },
   { name: 'Complete.tab', desc: 'Rubric-remedy relationships', size: '~38 MB' },
+  { name: 'Xrefs.tab', desc: 'Cross-references between rubrics', size: '~16 MB' },
 ]
 
 interface RepertorySource {
@@ -31,12 +32,18 @@ interface RepertorySource {
   publisher: string
 }
 
+// Hardcoded list — local Postgres pipeline doesn't track sources per row.
+// "source" is stored as job metadata only.
+const LOCAL_SOURCES: RepertorySource[] = [
+  { id: 'complete-2024',   name: 'Complete Repertory',     slug: 'complete',   publisher: 'Roger van Zandvoort' },
+  { id: 'kent',            name: 'Kent Repertory',          slug: 'kent',       publisher: 'J.T. Kent' },
+  { id: 'boericke',        name: "Boericke's Repertory",    slug: 'boericke',   publisher: 'William Boericke' },
+  { id: 'synthesis',       name: 'Synthesis Repertory',     slug: 'synthesis',  publisher: 'Frederik Schroyens' },
+]
+
 interface ValidationIssue {
   file: string
-  type: string
-  row?: number
-  col?: number
-  message: string
+  problem: string
 }
 
 interface ImportSummary {
@@ -68,7 +75,7 @@ export default function UploadWizardPage() {
   const [validationResult, setValidationResult] = useState<{
     valid: boolean
     issues: ValidationIssue[]
-    filesReceived: string[]
+    received: string[]
   } | null>(null)
 
   // Import
@@ -77,21 +84,19 @@ export default function UploadWizardPage() {
   const [importSummary, setImportSummary] = useState<ImportSummary[] | null>(null)
   const [importStatus, setImportStatus] = useState<string>('')
 
+  // Preview totals (after validate succeeds)
+  const [previewTotals, setPreviewTotals] = useState<{
+    newRows: number; existingRows: number; toUpdateRows: number; skippedRows: number
+  } | null>(null)
+
   const logsEndRef = useRef<HTMLDivElement>(null)
 
   const next = () => setStep(s => Math.min(5, s + 1) as Step)
   const prev = () => setStep(s => Math.max(1, s - 1) as Step)
 
-  // Load repertory sources
+  // Sources are local-only metadata for the new pipeline (no DB lookup needed)
   useEffect(() => {
-    fetch(`${API_URL}/api/upload/sources`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setSources(data)
-      })
-      .catch(() => {})
+    setSources(LOCAL_SOURCES)
   }, [])
 
   // Auto-scroll logs
@@ -121,29 +126,47 @@ export default function UploadWizardPage() {
     setValidationResult(null)
   }
 
-  // Step 3: Validate
+  // Step 3: Validate + preview
   const handleValidate = async () => {
     setLoading(true)
     setError('')
     setValidationResult(null)
+    setPreviewTotals(null)
 
     try {
-      const formData = new FormData()
-      for (const f of files) formData.append('files', f)
-
-      const res = await fetch(`${API_URL}/api/upload/validate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: formData,
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Validation request failed')
-        return
+      const buildFD = () => {
+        const fd = new FormData()
+        for (const f of files) fd.append('files', f)
+        return fd
       }
 
-      setValidationResult(data)
+      // 1. validate (file presence + format)
+      const valRes = await fetch(`${API_URL}/api/repertory-upload/validate`, {
+        method: 'POST',
+        body: buildFD(),
+      })
+      const valData = await valRes.json()
+      if (!valRes.ok) {
+        setError(valData.error || 'Validation request failed')
+        return
+      }
+      setValidationResult({
+        valid: valData.valid,
+        issues: valData.issues || [],
+        received: valData.received || [],
+      })
+
+      // 2. only run preview if validation passed
+      if (valData.valid) {
+        const prevRes = await fetch(`${API_URL}/api/repertory-upload/preview`, {
+          method: 'POST',
+          body: buildFD(),
+        })
+        const prevData = await prevRes.json()
+        if (prevRes.ok && prevData.totals) {
+          setPreviewTotals(prevData.totals)
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Validation failed')
     } finally {
@@ -151,7 +174,7 @@ export default function UploadWizardPage() {
     }
   }
 
-  // Step 4: Start import
+  // Step 4: Start import — hits new local-Postgres endpoint
   const handleStartImport = async () => {
     setLoading(true)
     setError('')
@@ -161,21 +184,20 @@ export default function UploadWizardPage() {
 
     try {
       const formData = new FormData()
-      formData.append('sourceId', sourceId)
+      formData.append('source', sourceId)
       formData.append('year', String(year))
-      formData.append('versionTag', versionTag)
+      formData.append('version', versionTag)
       for (const f of files) formData.append('files', f)
 
-      const res = await fetch(`${API_URL}/api/upload/start`, {
+      const res = await fetch(`${API_URL}/api/repertory-upload/import-async`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
         body: formData,
       })
 
       const data = await res.json()
 
       if (res.status === 422) {
-        setValidationResult({ valid: false, issues: data.issues, filesReceived: [] })
+        setValidationResult({ valid: false, issues: data.issues || [], received: [] })
         setError('Validation failed. Go back and fix issues.')
         setLoading(false)
         return
@@ -187,11 +209,11 @@ export default function UploadWizardPage() {
         return
       }
 
-      setJobId(data.jobId)
+      setJobId(String(data.jobId))
       next()
 
       // Start polling for progress
-      pollJobProgress(data.jobId)
+      pollJobProgress(String(data.jobId))
     } catch (err: any) {
       setError(err.message || 'Upload failed')
       setLoading(false)
@@ -201,25 +223,30 @@ export default function UploadWizardPage() {
   const pollJobProgress = useCallback(async (id: string) => {
     const poll = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/upload/jobs/${id}`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        })
+        const res = await fetch(`${API_URL}/api/repertory-upload/jobs/${id}`)
         const data = await res.json()
 
         if (data.logs) {
-          setImportLogs(data.logs)
+          // Map service log shape { file, message, time } → UI shape { step, message, time }
+          setImportLogs(
+            data.logs.map((l: any) => ({
+              step: l.file ?? l.step ?? '',
+              message: l.message ?? '',
+              time: l.time ?? new Date().toISOString(),
+            })),
+          )
         }
 
         if (data.status === 'done') {
           setImportStatus('done')
-          setImportSummary(data.import_summary)
+          setImportSummary(data.summary)
           setLoading(false)
           return
         }
 
         if (data.status === 'failed') {
           setImportStatus('failed')
-          setImportSummary(data.import_summary)
+          setImportSummary(data.summary)
           setError('Import failed. Check the summary below.')
           setLoading(false)
           return
@@ -384,9 +411,9 @@ export default function UploadWizardPage() {
 
           <div className="flex gap-3">
             <button onClick={prev} className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Back</button>
-            <button onClick={next} disabled={matchedFiles.length === 0}
+            <button onClick={next} disabled={matchedFiles.length < REQUIRED_FILES.length}
               className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
-              Continue ({matchedFiles.length} files ready)
+              Continue ({matchedFiles.length}/{REQUIRED_FILES.length} files ready)
             </button>
           </div>
         </div>
@@ -419,7 +446,7 @@ export default function UploadWizardPage() {
                   {validationResult.valid ? 'All files passed validation' : `${validationResult.issues.length} issue(s) found`}
                 </p>
                 <p className="text-xs mt-1 text-gray-600">
-                  Files checked: {validationResult.filesReceived?.join(', ')}
+                  Files checked: {validationResult.received?.join(', ')}
                 </p>
               </div>
 
@@ -428,12 +455,25 @@ export default function UploadWizardPage() {
                 <div className="max-h-64 overflow-y-auto space-y-1.5">
                   {validationResult.issues.map((issue, i) => (
                     <div key={i} className="border border-red-200 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-700">
-                      <span className="font-mono font-bold">[{issue.type}]</span>{' '}
-                      <span className="font-semibold">{issue.file}</span>
-                      {issue.row && <span className="text-red-500"> row {issue.row}</span>}
-                      {': '}{issue.message}
+                      <span className="font-semibold font-mono">{issue.file}</span>
+                      {': '}{issue.problem}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Preview totals (only when valid) */}
+              {validationResult.valid && previewTotals && (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b">
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Pre-Import Preview</p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 p-4 text-center">
+                    <Stat label="New"      value={previewTotals.newRows}      tone="green" />
+                    <Stat label="Existing" value={previewTotals.existingRows} tone="blue" />
+                    <Stat label="To update" value={previewTotals.toUpdateRows} tone="amber" />
+                    <Stat label="Skipped"  value={previewTotals.skippedRows}  tone="gray" />
+                  </div>
                 </div>
               )}
 
@@ -555,7 +595,7 @@ export default function UploadWizardPage() {
             The data is now available for doctors to use in their repertorization.
           </p>
           <div className="flex gap-3 justify-center pt-4">
-            <button onClick={() => { setStep(1); setFiles([]); setValidationResult(null); setImportSummary(null); setImportLogs([]); setJobId(''); setError('') }}
+            <button onClick={() => { setStep(1); setFiles([]); setValidationResult(null); setPreviewTotals(null); setImportSummary(null); setImportLogs([]); setJobId(''); setError('') }}
               className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               Upload Another
             </button>
@@ -566,6 +606,21 @@ export default function UploadWizardPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone: 'green' | 'blue' | 'amber' | 'gray' }) {
+  const colors: Record<string, string> = {
+    green: 'text-green-700',
+    blue:  'text-blue-700',
+    amber: 'text-amber-700',
+    gray:  'text-gray-700',
+  }
+  return (
+    <div>
+      <div className={`text-2xl font-semibold ${colors[tone]}`}>{value.toLocaleString()}</div>
+      <div className="text-[10px] uppercase tracking-wide text-gray-500 mt-0.5">{label}</div>
     </div>
   )
 }

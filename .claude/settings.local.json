@@ -33,7 +33,27 @@
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"clinic_name\":\"hardik\",\"first_name\":\"hardik\",\"last_name\":\"patel\",\"email\":\"hardik@yopmail.com\",\"password\":\"hardik12\"}')",
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"hardik@yopmail.com\",\"password\":\"hardik12\"}')",
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/register -H 'Content-Type: application/json' -d '{\"clinic_name\":\"Hardik Admin Clinic\",\"first_name\":\"Hardik\",\"last_name\":\"Admin\",\"email\":\"hardik@gmail.com\",\"password\":\"Admin@123#\"}')",
-      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"hardik@gmail.com\",\"password\":\"Admin@123#\"}')"
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"identifier\":\"hardik@gmail.com\",\"password\":\"Admin@123#\"}')",
+      "Bash(npx tsc *)",
+      "Bash(curl -s http://localhost:3001/api/repertory-upload/required)",
+      "Bash(curl -s -X POST http://localhost:3001/api/repertory-upload/validate -F \"files=@Tab/RemID.tab\" -F \"files=@Tab/REPolar.tab\" -F \"files=@Tab/Complete.tab\" -F \"files=@Tab/Pagerefs.tab\" -F \"files=@Tab/LibraryIndex.tab\" -F \"files=@Tab/PapaSub.tab\" -F \"files=@Tab/Remlist.tab\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/repertory-upload/import-async -F \"files=@Tab/RemID.tab\" -F \"files=@Tab/REPolar.tab\" -F \"files=@Tab/Complete.tab\" -F \"files=@Tab/Pagerefs.tab\" -F \"files=@Tab/LibraryIndex.tab\" -F \"files=@Tab/PapaSub.tab\" -F \"files=@Tab/Remlist.tab\")",
+      "Bash(curl -s http://localhost:3001/api/repertory-upload/status?jobId=1)",
+      "Bash(curl -s http://localhost:3001/api/repertory-upload/status?jobId=2)",
+      "Bash(time curl *)",
+      "Bash(curl -s -X POST http://localhost:3001/api/repertory-upload/import-async -F \"files=@Tab/RemID.tab\" -F \"files=@Tab/REPolar.tab\" -F \"files=@Tab/Complete.tab\" -F \"files=@Tab/Pagerefs.tab\" -F \"files=@Tab/LibraryIndex.tab\" -F \"files=@Tab/PapaSub.tab\" -F \"files=@Tab/Remlist.tab\" -F \"source=complete-2024\" -F \"year=2024\" -F \"version=v1.0\")",
+      "Bash(curl -s -X DELETE \"http://localhost:3001/api/repertory-upload/data?withHistory=1\")",
+      "Bash(printf \"garbage_no_tabs_anywhere\\\\nstill_bad\\\\n\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/repertory-upload/validate -F \"files=@RemID.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/REPolar.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Complete.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Pagerefs.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/LibraryIndex.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/PapaSub.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Remlist.tab\")",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" -X POST http://localhost:3001/api/repertory-upload/import -F \"files=@RemID.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/REPolar.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Complete.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Pagerefs.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/LibraryIndex.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/PapaSub.tab\" -F \"files=@E:/Hardik/workspace/AI-Zomeo-saas/Tab/Remlist.tab\")",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" -X POST http://localhost:3001/api/repertory-upload/validate -F \"files=@Tab/RemID.tab\" -F \"files=@Tab/REPolar.tab\" -F \"files=@Tab/Complete.tab\")",
+      "Bash(curl -s -w \"HTTP %{http_code}\\\\n\" -X POST http://localhost:3001/api/repertory-upload/validate -F \"files=@/tmp/../../etc-evil.tab;filename=../../../evil.tab\")",
+      "Bash(curl *)",
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(next\\(\\(s.get\\('error','no error'\\) for s in d['summary'] if s['file']=='RemID.tab'\\), 'not found'\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('count:', len\\(d['data']\\)\\); [print\\(' ', r['chapter'].ljust\\(28\\), r['rubric_count']\\) for r in d['data'][:5]]\")",
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(' ', r['ext_id'], r['rubric_text'][:50].ljust\\(52\\), 'remedies=', r['remedy_count'], 'children=', r['child_count']\\) for r in d['data']]\")",
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\)['data']; print\\('text:', d['rubric_text']\\); print\\('remedies:', d['remedy_count']\\); [print\\(' grade', g.split\\('_'\\)[1], ':', len\\(rs\\), 'remedies', '— first 5:', [r['abbreviation'] for r in rs[:5]]\\) for g, rs in d['remedy_by_grade'].items\\(\\) if rs]\")",
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(' ', r['ext_id'], r['rubric_text'][:50].ljust\\(52\\), 'remedies=', r['remedy_count']\\) for r in d['data']]\")"
     ]
   }
 }

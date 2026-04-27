@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, FolderOpen, BookOpen, BarChart2,
   Pill, Calendar, Settings, LogOut, Sparkles, BookMarked,
-  FileText, ShieldCheck,
+  FileText, ShieldCheck, Upload,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/patients', label: 'Patients', icon: Users },
   { href: '/cases', label: 'Cases', icon: FolderOpen },
   { href: '/repertory', label: 'Repertory', icon: BookOpen },
+  { href: '/repertory-upload', label: 'Repertory Upload', icon: Upload },
   { href: '/analysis', label: 'Analysis', icon: BarChart2 },
   { href: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
   { href: '/prescriptions', label: 'Prescriptions', icon: Pill },
