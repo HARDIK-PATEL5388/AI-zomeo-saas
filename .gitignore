@@ -2,8 +2,13 @@
 node_modules/
 
 # Next.js (VERY IMPORTANT)
+frontend/.next/
 .next/
 out/
+
+# Webpack / cache
+*.pack.gz
+*.hot-update.js
 
 # Build output
 dist/
