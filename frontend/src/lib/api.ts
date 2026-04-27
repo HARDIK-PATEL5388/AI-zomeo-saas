@@ -11,12 +11,26 @@ function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// Turn a backend error body into a readable string. Hono validator returns
+// `{ success:false, error:{ issues:[…] } }`; our handlers return `{ error, message }`.
+// Either way avoid the dreaded "[object Object]".
+function describeErr(body: any, status: number): string {
+  if (!body) return `API Error ${status}`
+  if (typeof body === 'string') return body
+  if (typeof body.error === 'string') return body.message ? `${body.error}: ${body.message}` : body.error
+  if (body.error?.issues?.length) {
+    return body.error.issues.slice(0, 3).map((i: any) => `${i.path?.join('.') || '?'}: ${i.message}`).join('; ')
+  }
+  if (body.message) return body.message
+  try { return JSON.stringify(body).slice(0, 300) } catch { return `API Error ${status}` }
+}
+
 export const api = {
   async get<T = unknown>(path: string): Promise<T> {
     const res = await fetch(`${API_URL}/api${path}`, { headers: authHeader() })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `API Error ${res.status}`)
+      throw new Error(describeErr(err, res.status))
     }
     return res.json()
   },
@@ -29,7 +43,7 @@ export const api = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `API Error ${res.status}`)
+      throw new Error(describeErr(err, res.status))
     }
     return res.json()
   },
@@ -42,7 +56,7 @@ export const api = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `API Error ${res.status}`)
+      throw new Error(describeErr(err, res.status))
     }
     return res.json()
   },
@@ -55,7 +69,7 @@ export const api = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `API Error ${res.status}`)
+      throw new Error(describeErr(err, res.status))
     }
     return res.json()
   },
@@ -67,7 +81,7 @@ export const api = {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `API Error ${res.status}`)
+      throw new Error(describeErr(err, res.status))
     }
     return res.json()
   },

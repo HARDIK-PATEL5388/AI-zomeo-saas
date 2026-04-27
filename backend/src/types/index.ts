@@ -32,16 +32,68 @@ export interface Clinic {
   subscription_status: 'active' | 'suspended' | 'cancelled'
 }
 
+export interface PatientAddress {
+  address?: string
+  street?: string
+  country?: string
+  state?: string
+  city?: string
+  zip_code?: string
+}
+
+export interface PatientPermanentAddress extends PatientAddress {
+  same_as_current?: boolean
+}
+
+export interface PatientContactDetails {
+  home_number?: string
+  office_number?: string
+  website?: string
+  emergency_number?: string
+  fax_number?: string
+}
+
 export interface Patient {
   id: string
   clinic_id: string
+  // Registration Information
+  registration_date?: string
+  registration_number?: string
+  diagnosis?: string
+  title?: string
   first_name: string
-  last_name: string
+  middle_name?: string
+  last_name?: string | null
+  phone?: string                 // Mobile Number
+  email?: string
   date_of_birth?: string
   age?: number
-  gender: Gender
-  phone?: string
-  email?: string
+  blood_group?: string
+  gender?: Gender | null
+  referred_by?: string
+  currency?: string
+  consultation_charges?: number
+  follow_up_charges?: number
+  bill_to?: string
+  opd_number?: string
+  opd_date?: string
+  ipd_number?: string
+  ipd_date?: string
+  remarks?: string
+  photo_url?: string
+  // Preliminary
+  occupation?: string
+  organization?: string
+  marital_status?: string
+  religion?: string
+  diet?: string
+  prognosis?: string
+  preliminary_remarks?: string
+  // Contact (JSONB)
+  current_address?: PatientAddress
+  permanent_address?: PatientPermanentAddress
+  contact_details?: PatientContactDetails
+  // Other / legacy
   address?: string
   is_active: boolean
 }

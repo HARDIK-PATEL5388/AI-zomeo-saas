@@ -53,7 +53,13 @@
       "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\('count:', len\\(d['data']\\)\\); [print\\(' ', r['chapter'].ljust\\(28\\), r['rubric_count']\\) for r in d['data'][:5]]\")",
       "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(' ', r['ext_id'], r['rubric_text'][:50].ljust\\(52\\), 'remedies=', r['remedy_count'], 'children=', r['child_count']\\) for r in d['data']]\")",
       "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\)['data']; print\\('text:', d['rubric_text']\\); print\\('remedies:', d['remedy_count']\\); [print\\(' grade', g.split\\('_'\\)[1], ':', len\\(rs\\), 'remedies', '— first 5:', [r['abbreviation'] for r in rs[:5]]\\) for g, rs in d['remedy_by_grade'].items\\(\\) if rs]\")",
-      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(' ', r['ext_id'], r['rubric_text'][:50].ljust\\(52\\), 'remedies=', r['remedy_count']\\) for r in d['data']]\")"
+      "Bash(python -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(' ', r['ext_id'], r['rubric_text'][:50].ljust\\(52\\), 'remedies=', r['remedy_count']\\) for r in d['data']]\")",
+      "Bash(PGPASSWORD='StrongPassword@123' psql -h localhost -U postgres -d mydb -c \"\\\\d patients\")",
+      "Bash(PORT=0 npx tsx scripts/_patient_e2e.ts)",
+      "Bash(npx tsx *)",
+      "Bash(cat)",
+      "Bash(rm scripts/_seed_test_user.ts scripts/_proof.ts scripts/_cleanup.ts scripts/_check_db.ts)",
+      "Bash(grep *)"
     ]
   }
 }

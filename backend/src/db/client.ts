@@ -1,6 +1,14 @@
 // backend/src/db/client.ts
 import { Kysely, PostgresDialect, sql, Generated } from 'kysely'
-import { Pool } from 'pg'
+import { Pool, types as pgTypes } from 'pg'
+
+// pg by default parses DATE (oid 1082) into a JS Date which then JSON-serializes
+// to a UTC ISO timestamp — that loses the original day in non-UTC time zones
+// and breaks <input type="date"> round-tripping. Keep the raw 'YYYY-MM-DD'
+// string instead.
+pgTypes.setTypeParser(1082, (v: string) => v)
+// NUMERIC (oid 1700) → number for client-friendly arithmetic
+pgTypes.setTypeParser(1700, (v: string) => (v == null ? null : Number(v)))
 import type { 
   User, Clinic, Patient, Case, CaseRubric, 
   RepertorySource, Chapter, Rubric, Remedy, 
@@ -10,7 +18,16 @@ import type {
 export interface Database {
   users: Omit<User, 'id'> & { id: Generated<string>; password_hash: string; mobile_code: string | null; mobile_number: string | null; created_at: Generated<string>; updated_at: Generated<string> }
   clinics: Omit<Clinic, 'id'> & { id: Generated<string>; created_at: Generated<string>; updated_at: Generated<string> }
-  patients: Omit<Patient, 'id'> & { id: Generated<string>; created_at: Generated<string>; updated_at: Generated<string> }
+  patients: Omit<Patient, 'id' | 'current_address' | 'permanent_address' | 'contact_details'> & {
+    id: Generated<string>
+    created_at: Generated<string>
+    updated_at: Generated<string>
+    registration_date: Generated<string>
+    registration_number: Generated<string>
+    current_address: any
+    permanent_address: any
+    contact_details: any
+  }
   cases: Omit<Case, 'id'> & { id: Generated<string>; created_at: Generated<string>; updated_at: Generated<string> }
   case_rubrics: Omit<CaseRubric, 'id'> & { id: Generated<string>; created_at: Generated<string> }
   repertory_sources: Omit<RepertorySource, 'id'> & { id: Generated<string>; created_at: Generated<string>; is_active: Generated<boolean> }

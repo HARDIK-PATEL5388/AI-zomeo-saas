@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FlaskConical, Eye, EyeOff, Loader2 } from 'lucide-react'
-// import { api } from '@/lib/api'
+import { api } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,20 +33,23 @@ export default function LoginPage() {
 
     setIsLoading(true)
 
-    // API call commented out — redirect directly after validation
-    // try {
-    //   const res = await api.post('/auth/login', { email, password })
-    //   if (res.token) {
-    //     localStorage.setItem('auth_token', res.token)
-    //   }
-    // } catch (err: unknown) {
-    //   const message = err instanceof Error ? err.message : 'Login failed'
-    //   setError(message.includes('401') ? 'Invalid email or password.' : 'Unable to connect to server.')
-    //   setIsLoading(false)
-    //   return
-    // }
+    try {
+      const res = await api.post<{ token: string; user: { email: string } }>(
+        '/auth/login',
+        { identifier: email, password }
+      )
+      if (!res.token) throw new Error('No token in response')
+      localStorage.setItem('zomeo_access_token', res.token)
+      localStorage.setItem('user_email', res.user?.email ?? email)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message.includes('401') || /credentials/i.test(message)
+        ? 'Invalid email or password.'
+        : `Unable to sign in: ${message}`)
+      setIsLoading(false)
+      return
+    }
 
-    localStorage.setItem('user_email', email)
     router.push('/dashboard')
   }
 

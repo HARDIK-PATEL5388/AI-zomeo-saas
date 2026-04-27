@@ -1,8 +1,0 @@
-{
-  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/admin/repertory/upload/page": "app/admin/repertory/upload/page.js",
-  "/(app)/patients/page": "app/(app)/patients/page.js",
-  "/(app)/cases/page": "app/(app)/cases/page.js",
-  "/(app)/settings/page": "app/(app)/settings/page.js",
-  "/(app)/repertory/page": "app/(app)/repertory/page.js"
-}
