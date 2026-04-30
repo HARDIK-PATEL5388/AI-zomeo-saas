@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth'
 import { repertoryRoutes } from './routes/repertory'
 import { casesRoutes } from './routes/cases'
 import { analysisRoutes } from './routes/analysis'
+import { analysisV2Routes } from './routes/analysisV2'
 import { prescriptionsRoutes } from './routes/prescriptions'
 import { followupsRoutes } from './routes/followups'
 import { patientsRoutes } from './routes/patients'
@@ -54,6 +55,7 @@ app.route('/api/patients', patientsRoutes)
 app.route('/api/cases', casesRoutes)
 app.route('/api/repertory', repertoryRoutes)
 app.route('/api/analysis', analysisRoutes)
+app.route('/api/analysis/v2', analysisV2Routes)
 app.route('/api/prescriptions', prescriptionsRoutes)
 app.route('/api/followups', followupsRoutes)
 app.route('/api/remedies', remediesRoutes)
