@@ -34,15 +34,17 @@ async function ensureCase(c: any, caseId: string) {
 
 app.get('/search/rubrics', async (c) => {
   const q = c.req.query('q') ?? ''
+  const book = c.req.query('book') || undefined
   const limit = Math.min(parseInt(c.req.query('limit') ?? '25'), 100)
-  const data = await searchRubrics(q, limit)
+  const data = await searchRubrics(q, limit, book)
   return c.json({ data })
 })
 
 app.get('/search/symptoms', async (c) => {
   const q = c.req.query('q') ?? ''
+  const book = c.req.query('book') || undefined
   const limit = Math.min(parseInt(c.req.query('limit') ?? '30'), 100)
-  const data = await searchSymptoms(q, limit)
+  const data = await searchSymptoms(q, limit, book)
   return c.json({ data })
 })
 
@@ -59,7 +61,11 @@ app.get('/cases/:caseId/rubrics', async (c) => {
 app.post(
   '/cases/:caseId/rubrics',
   zValidator('json', z.object({
-    rubric_ext_id: z.number().int(),
+    // New (preferred) — surrogate id uniquely identifies a (book, ext_id) pair.
+    rubric_id: z.number().int().optional(),
+    // Legacy — defaults to 'complete' book unless book_code is supplied.
+    rubric_ext_id: z.number().int().optional(),
+    book_code: z.string().optional(),
     weight: z.number().int().min(1).max(4).optional(),
     intensity: z.enum(['high', 'mid', 'low']).optional(),
     symptom_note: z.string().optional(),
@@ -69,7 +75,17 @@ app.post(
     const guard = await ensureCase(c, caseId); if (guard) return guard
     const body = c.req.valid('json')
     const user = c.get('user')
-    const data = await addCaseRubric(caseId, body.rubric_ext_id, {
+
+    const ref = body.rubric_id != null
+      ? { rubricId: body.rubric_id }
+      : body.book_code && body.rubric_ext_id != null
+        ? { bookCode: body.book_code, rubricExtId: body.rubric_ext_id }
+        : body.rubric_ext_id != null
+          ? body.rubric_ext_id
+          : null
+    if (ref == null) return c.json({ error: 'rubric_id or rubric_ext_id required' }, 400)
+
+    const data = await addCaseRubric(caseId, ref as any, {
       weight: body.weight,
       intensity: body.intensity,
       symptom_note: body.symptom_note,
@@ -90,7 +106,12 @@ app.patch(
   async (c) => {
     const { caseId, extId } = c.req.param()
     const guard = await ensureCase(c, caseId); if (guard) return guard
-    await updateCaseRubric(caseId, parseInt(extId), c.req.valid('json'))
+    const bookCode = c.req.query('book') || undefined
+    await updateCaseRubric(
+      caseId,
+      { rubricExtId: parseInt(extId), bookCode },
+      c.req.valid('json'),
+    )
     return c.json({ ok: true })
   }
 )
@@ -98,7 +119,8 @@ app.patch(
 app.delete('/cases/:caseId/rubrics/:extId', async (c) => {
   const { caseId, extId } = c.req.param()
   const guard = await ensureCase(c, caseId); if (guard) return guard
-  await removeCaseRubric(caseId, parseInt(extId))
+  const bookCode = c.req.query('book') || undefined
+  await removeCaseRubric(caseId, { rubricExtId: parseInt(extId), bookCode })
   return c.json({ ok: true })
 })
 

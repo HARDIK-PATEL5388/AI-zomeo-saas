@@ -98,12 +98,35 @@ function md5(buffer: Buffer): string {
   return crypto.createHash('md5').update(buffer).digest('hex')
 }
 
-async function isAlreadyImported(client: PoolClient, fileName: string, hash: string) {
+async function isAlreadyImported(client: PoolClient, bookCode: string, fileName: string, hash: string) {
   const r = await client.query(
-    `SELECT 1 FROM rep_file_versions WHERE file_name=$1 AND md5_hash=$2 AND status='done' LIMIT 1`,
-    [fileName, hash],
+    `SELECT 1 FROM rep_file_versions
+      WHERE book_code=$1 AND file_name=$2 AND md5_hash=$3 AND status='done'
+      LIMIT 1`,
+    [bookCode, fileName, hash],
   )
   return r.rowCount! > 0
+}
+
+// ---------------------------------------------------------------------------
+// Book lookup / creation. Each import job is scoped to one repertory book.
+// 'complete' is the default and pre-seeded by migration 009.
+// ---------------------------------------------------------------------------
+async function ensureBook(
+  client: PoolClient,
+  code: string,
+  name?: string,
+): Promise<number> {
+  const found = await client.query(
+    `SELECT id FROM rep_books WHERE code = $1`,
+    [code],
+  )
+  if ((found.rowCount ?? 0) > 0) return found.rows[0].id as number
+  const created = await client.query(
+    `INSERT INTO rep_books (code, name) VALUES ($1, $2) RETURNING id`,
+    [code, name ?? code.charAt(0).toUpperCase() + code.slice(1)],
+  )
+  return created.rows[0].id as number
 }
 
 // ---------------------------------------------------------------------------
@@ -153,7 +176,8 @@ async function batchUpsert(
 // Per-file importers (each runs inside a single transaction)
 // ---------------------------------------------------------------------------
 
-async function importRemID(client: PoolClient, buf: Buffer) {
+// rep_remedies is shared across books (Bryonia is Bryonia in any repertory).
+async function importRemID(client: PoolClient, buf: Buffer, _bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
@@ -162,7 +186,6 @@ async function importRemID(client: PoolClient, buf: Buffer) {
     if (!code) { skipped++; continue }
     records.push([code, col(row, 1), col(row, 2) || col(row, 1), col(row, 3) || null])
   }
-  // updated_at is refreshed on conflict via EXCLUDED.updated_at (default = NOW())
   const added = await batchUpsert(
     client,
     'rep_remedies',
@@ -175,18 +198,22 @@ async function importRemID(client: PoolClient, buf: Buffer) {
   return { added, updated: 0, skipped }
 }
 
-async function importComplete(client: PoolClient, buf: Buffer) {
+async function importComplete(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
-  const records: any[][] = []
+  const chapterNames = new Set<string>()
+  const staged: Array<{
+    extId: number; parent: number | null; depth: number;
+    chapter: string | null; text: string; full: string;
+  }> = []
   let skipped = 0
 
   for (const row of rows) {
     const extId = colInt(row, 0)
     if (!extId) { skipped++; continue }
 
-    const parent = colInt(row, 2) || null
-    const depth = colInt(row, 4)
-    const chapter = col(row, 6)
+    const parent  = colInt(row, 2) || null
+    const depth   = colInt(row, 4)
+    const chapter = col(row, 6) || null
 
     const parts: string[] = []
     for (let c = 7; c < row.length; c++) {
@@ -195,43 +222,70 @@ async function importComplete(client: PoolClient, buf: Buffer) {
     }
     const text = parts[parts.length - 1] || ''
     if (!text) { skipped++; continue }
+    if (chapter) chapterNames.add(chapter)
 
-    records.push([
-      extId,
-      parent,
-      depth,
-      chapter || null,
-      text,
-      parts.join(' > ') || text,
-    ])
+    staged.push({
+      extId, parent, depth, chapter, text,
+      full: parts.join(' > ') || text,
+    })
   }
+
+  // Insert chapters for this book (idempotent).
+  const chapterArr = Array.from(chapterNames)
+  for (let i = 0; i < chapterArr.length; i++) {
+    await client.query(
+      `INSERT INTO rep_book_chapters (book_id, name, code, sort_order)
+         VALUES ($1, $2, $2, $3)
+       ON CONFLICT (book_id, name) DO NOTHING`,
+      [bookId, chapterArr[i], i + 1],
+    )
+  }
+
+  // Resolve chapter names → ids for this book.
+  const chapterMap = new Map<string, number>()
+  const chRes = await client.query(
+    `SELECT id, name FROM rep_book_chapters WHERE book_id = $1`,
+    [bookId],
+  )
+  for (const r of chRes.rows) chapterMap.set(r.name, r.id)
+
+  const records: any[][] = staged.map(s => [
+    bookId,
+    s.extId,
+    s.parent,
+    s.depth,
+    s.chapter ? chapterMap.get(s.chapter) ?? null : null,
+    s.chapter,
+    s.text,
+    s.full,
+  ])
 
   const added = await batchUpsert(
     client,
     'rep_rubrics',
-    ['ext_id', 'parent_ext_id', 'depth', 'chapter', 'rubric_text', 'full_path'],
-    ['ext_id'],
-    ['parent_ext_id', 'depth', 'chapter', 'rubric_text', 'full_path', 'updated_at'],
+    ['book_id', 'ext_id', 'parent_ext_id', 'depth', 'chapter_id', 'chapter', 'rubric_text', 'full_path'],
+    ['book_id', 'ext_id'],
+    ['parent_ext_id', 'depth', 'chapter_id', 'chapter', 'rubric_text', 'full_path', 'updated_at'],
     records,
     500,
   )
   return { added, updated: 0, skipped }
 }
 
-async function importREPolar(client: PoolClient, buf: Buffer) {
+async function importREPolar(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
   for (const row of rows) {
     const a = colInt(row, 0), b = colInt(row, 1)
     if (!a || !b) { skipped++; continue }
-    records.push([a, b])
+    records.push([bookId, a, b])
   }
   const added = await batchUpsert(
     client,
     'rep_polar_pairs',
-    ['ext_id_1', 'ext_id_2'],
-    ['ext_id_1', 'ext_id_2'],
+    ['book_id', 'ext_id_1', 'ext_id_2'],
+    ['book_id', 'ext_id_1', 'ext_id_2'],
     [],
     records,
     1000,
@@ -239,20 +293,20 @@ async function importREPolar(client: PoolClient, buf: Buffer) {
   return { added, updated: 0, skipped }
 }
 
-async function importPagerefs(client: PoolClient, buf: Buffer) {
+async function importPagerefs(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
   for (const row of rows) {
     const ext = colInt(row, 0)
     if (!ext) { skipped++; continue }
-    records.push([ext, col(row, 1) || '?', colInt(row, 2, 0)])
+    records.push([bookId, ext, col(row, 1) || '?', colInt(row, 2, 0)])
   }
   const added = await batchUpsert(
     client,
     'rep_page_refs',
-    ['rubric_ext_id', 'book_code', 'page_number'],
-    ['rubric_ext_id', 'book_code', 'page_number'],
+    ['book_id', 'rubric_ext_id', 'book_code', 'page_number'],
+    ['book_id', 'rubric_ext_id', 'book_code', 'page_number'],
     [],
     records,
     1000,
@@ -260,20 +314,20 @@ async function importPagerefs(client: PoolClient, buf: Buffer) {
   return { added, updated: 0, skipped }
 }
 
-async function importLibraryIndex(client: PoolClient, buf: Buffer) {
+async function importLibraryIndex(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
   for (const row of rows) {
     const ext = colInt(row, 0)
     if (!ext) { skipped++; continue }
-    records.push([ext, col(row, 3), col(row, 4), col(row, 5)])
+    records.push([bookId, ext, col(row, 3), col(row, 4), col(row, 5)])
   }
   const added = await batchUpsert(
     client,
     'rep_library_index',
-    ['rubric_ext_id', 'reference', 'author', 'year'],
-    ['rubric_ext_id', 'reference', 'author', 'year'],
+    ['book_id', 'rubric_ext_id', 'reference', 'author', 'year'],
+    ['book_id', 'rubric_ext_id', 'reference', 'author', 'year'],
     [],
     records,
     1000,
@@ -281,20 +335,20 @@ async function importLibraryIndex(client: PoolClient, buf: Buffer) {
   return { added, updated: 0, skipped }
 }
 
-async function importPapaSub(client: PoolClient, buf: Buffer) {
+async function importPapaSub(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
   for (const row of rows) {
     const ext = colInt(row, 0), code = colInt(row, 1)
     if (!ext || !code) { skipped++; continue }
-    records.push([ext, code])
+    records.push([bookId, ext, code])
   }
   const added = await batchUpsert(
     client,
     'rep_papasub',
-    ['rubric_ext_id', 'rem_code'],
-    ['rubric_ext_id', 'rem_code'],
+    ['book_id', 'rubric_ext_id', 'rem_code'],
+    ['book_id', 'rubric_ext_id', 'rem_code'],
     [],
     records,
     2000,
@@ -302,7 +356,7 @@ async function importPapaSub(client: PoolClient, buf: Buffer) {
   return { added, updated: 0, skipped }
 }
 
-async function importXrefs(client: PoolClient, buf: Buffer) {
+async function importXrefs(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
@@ -313,21 +367,21 @@ async function importXrefs(client: PoolClient, buf: Buffer) {
     if (!xref || !ext1 || !ext2) { skipped++; continue }
     const pair   = colInt(row, 1) || null
     const rel    = Math.min(127, Math.max(0, colInt(row, 4, 0)))
-    records.push([xref, pair, ext1, ext2, rel])
+    records.push([bookId, xref, pair, ext1, ext2, rel])
   }
   const added = await batchUpsert(
     client,
     'rep_xrefs',
-    ['xref_id', 'pair_id', 'rubric_ext_id_1', 'rubric_ext_id_2', 'rel_type'],
+    ['book_id', 'xref_id', 'pair_id', 'rubric_ext_id_1', 'rubric_ext_id_2', 'rel_type'],
     ['xref_id'],
-    ['pair_id', 'rubric_ext_id_1', 'rubric_ext_id_2', 'rel_type'],
+    ['book_id', 'pair_id', 'rubric_ext_id_1', 'rubric_ext_id_2', 'rel_type'],
     records,
     1000,
   )
   return { added, updated: 0, skipped }
 }
 
-async function importRemlist(client: PoolClient, buf: Buffer) {
+async function importRemlist(client: PoolClient, buf: Buffer, bookId: number) {
   const rows = parseTabBuffer(buf)
   const records: any[][] = []
   let skipped = 0
@@ -335,14 +389,14 @@ async function importRemlist(client: PoolClient, buf: Buffer) {
     const ext = colInt(row, 0), code = colInt(row, 1)
     if (!ext || !code) { skipped++; continue }
     const grade = Math.min(4, Math.max(1, colInt(row, 2, 1)))
-    records.push([ext, code, grade])
+    records.push([bookId, ext, code, grade])
   }
-  // Largest file (~2.8M rows). Batched UPSERT keeps memory bounded.
+  // Renamed table: rep_remlist → rep_rubric_remedies (migration 009).
   const added = await batchUpsert(
     client,
-    'rep_remlist',
-    ['rubric_ext_id', 'rem_code', 'grade'],
-    ['rubric_ext_id', 'rem_code'],
+    'rep_rubric_remedies',
+    ['book_id', 'rubric_ext_id', 'rem_code', 'grade'],
+    ['book_id', 'rubric_ext_id', 'rem_code'],
     ['grade'],
     records,
     2000,
@@ -351,9 +405,12 @@ async function importRemlist(client: PoolClient, buf: Buffer) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-file dispatch
+// Per-file dispatch (every importer takes the target book id)
 // ---------------------------------------------------------------------------
-const IMPORTERS: Record<string, (c: PoolClient, b: Buffer) => Promise<{ added: number; updated: number; skipped: number }>> = {
+type Importer = (c: PoolClient, b: Buffer, bookId: number) =>
+  Promise<{ added: number; updated: number; skipped: number }>
+
+const IMPORTERS: Record<string, Importer> = {
   'RemID.tab':        importRemID,
   'REPolar.tab':      importREPolar,
   'Complete.tab':     importComplete,
@@ -371,6 +428,10 @@ export interface JobMetadata {
   source?: string
   year?: number
   version?: string
+  /** Repertory book identifier — defaults to 'complete' for back-compat. */
+  bookCode?: string
+  /** Display name for a brand-new book; ignored if the book already exists. */
+  bookName?: string
 }
 
 export async function createJob(
@@ -409,7 +470,12 @@ export interface FilePreview {
 
 const BATCH_KEYS = 1000
 
-async function pkExistsBatch(table: string, pkCols: string[], rows: any[][]): Promise<Set<string>> {
+async function pkExistsBatch(
+  table: string,
+  pkCols: string[],
+  rows: any[][],
+  scope?: { col: string; value: any },
+): Promise<Set<string>> {
   const existing = new Set<string>()
   if (rows.length === 0) return existing
   const colList = pkCols.join(',')
@@ -423,7 +489,11 @@ async function pkExistsBatch(table: string, pkCols: string[], rows: any[][]): Pr
       for (const v of r) { params.push(v); slots.push(`$${p++}`) }
       placeholders.push(`(${slots.join(',')})`)
     }
-    const sql = `SELECT ${colList} FROM ${table} WHERE (${colList}) IN (${placeholders.join(',')})`
+    let sql = `SELECT ${colList} FROM ${table} WHERE (${colList}) IN (${placeholders.join(',')})`
+    if (scope) {
+      params.push(scope.value)
+      sql += ` AND ${scope.col} = $${p++}`
+    }
     const res = await localPool.query(sql, params)
     for (const row of res.rows) {
       existing.add(pkCols.map(c => String(row[c])).join('|'))
@@ -432,7 +502,16 @@ async function pkExistsBatch(table: string, pkCols: string[], rows: any[][]): Pr
   return existing
 }
 
-export async function previewFiles(files: Map<string, Buffer>): Promise<FilePreview[]> {
+export async function previewFiles(
+  files: Map<string, Buffer>,
+  bookCode = 'complete',
+): Promise<FilePreview[]> {
+  // Resolve book id once. Unknown book → preview against id 0 (no rows).
+  const bookRes = await localPool.query(
+    `SELECT id FROM rep_books WHERE code = $1`, [bookCode],
+  )
+  const bookId: number | null = (bookRes.rowCount ?? 0) > 0 ? bookRes.rows[0].id : null
+  const scope = bookId == null ? undefined : { col: 'book_id', value: bookId }
   const results: FilePreview[] = []
 
   for (const fileName of REQUIRED_FILES) {
@@ -488,7 +567,7 @@ export async function previewFiles(files: Map<string, Buffer>): Promise<FilePrev
         pkRows.push([ext, code])
       }
     } else if (fileName === 'Remlist.tab') {
-      table = 'rep_remlist'; pkCols = ['rubric_ext_id','rem_code']
+      table = 'rep_rubric_remedies'; pkCols = ['rubric_ext_id','rem_code']
       for (const row of rows) {
         const ext = colInt(row, 0), code = colInt(row, 1)
         if (!ext || !code) { skipped++; continue }
@@ -517,20 +596,26 @@ export async function previewFiles(files: Map<string, Buffer>): Promise<FilePrev
     }
 
     // For Remlist (millions of rows), exact preview is too slow.
-    // Instead: count target rows and existing rows in DB; assume overlap = min.
+    // Count rows scoped to the target book; assume overlap = min.
     const isHuge = pkRows.length > 100_000
+    const tableHasBookId =
+      table !== 'rep_remedies' && bookId != null
     if (isHuge) {
-      const existingTotalRes = await localPool.query(`SELECT COUNT(*)::int AS c FROM ${table}`)
+      const sql = tableHasBookId
+        ? `SELECT COUNT(*)::int AS c FROM ${table} WHERE book_id=$1`
+        : `SELECT COUNT(*)::int AS c FROM ${table}`
+      const args = tableHasBookId ? [bookId] : []
+      const existingTotalRes = await localPool.query(sql, args)
       const existingInDb = existingTotalRes.rows[0].c as number
-      // Heuristic: if our payload is a re-upload of the same data, overlap ≈ min.
-      // We can't know exact overlap without scanning. Estimate:
       existingCount = Math.min(existingInDb, pkRows.length)
-      toUpdate = existingCount  // assume potential update for all matched
-      unchanged = 0             // unknown without column comparison
+      toUpdate = existingCount
+      unchanged = 0
     } else {
-      const existingSet = await pkExistsBatch(table, pkCols, pkRows)
+      const existingSet = await pkExistsBatch(
+        table, pkCols, pkRows,
+        tableHasBookId ? scope : undefined,
+      )
       existingCount = existingSet.size
-      // Without full column comparison we treat all existing as potentially-updated.
       toUpdate = existingCount
       unchanged = 0
     }
@@ -557,8 +642,9 @@ export async function getJob(id: number) {
 
 export async function resetData(withHistory = false) {
   const dataTables = [
-    'rep_xrefs', 'rep_remlist', 'rep_papasub', 'rep_library_index',
-    'rep_page_refs', 'rep_polar_pairs', 'rep_rubrics', 'rep_remedies',
+    'rep_xrefs', 'rep_rubric_remedies', 'rep_papasub', 'rep_library_index',
+    'rep_page_refs', 'rep_polar_pairs', 'rep_rubrics', 'rep_book_chapters',
+    'rep_remedies',
   ]
   await localPool.query(`TRUNCATE ${dataTables.join(', ')} RESTART IDENTITY`)
   if (withHistory) {
@@ -586,6 +672,26 @@ export async function runImport(
 ): Promise<FileSummary[]> {
   await localPool.query(`UPDATE rep_upload_jobs SET status='importing', updated_at=NOW() WHERE id=$1`, [jobId])
 
+  // Resolve target book once for the whole job. Defaults to 'complete'
+  // when not provided so existing single-book uploads keep working.
+  const jobMetaRes = await localPool.query(
+    `SELECT metadata FROM rep_upload_jobs WHERE id=$1`,
+    [jobId],
+  )
+  const meta: JobMetadata = jobMetaRes.rows[0]?.metadata ?? {}
+  const bookCode = (meta.bookCode || 'complete').toLowerCase().trim()
+  const bookName = meta.bookName
+
+  let bookId: number
+  {
+    const setupClient = await localPool.connect()
+    try {
+      bookId = await ensureBook(setupClient, bookCode, bookName)
+    } finally {
+      setupClient.release()
+    }
+  }
+
   const summary: FileSummary[] = []
 
   for (const fileName of IMPORT_ORDER) {
@@ -602,34 +708,31 @@ export async function runImport(
     const client = await localPool.connect()
     let released = false
     try {
-      if (await isAlreadyImported(client, fileName, hash)) {
+      if (await isAlreadyImported(client, bookCode, fileName, hash)) {
         summary.push({ file: fileName, status: 'UNCHANGED', hash, durationMs: Date.now() - startedAt })
         onProgress?.(fileName, 'Skipped (unchanged)')
         continue
       }
 
-      // FIX B1 — file_version row + data + status all inside ONE transaction.
-      // On failure, ROLLBACK removes the 'processing' row; the catch block then
-      // writes a fresh 'failed' row via a separate connection.
       await client.query('BEGIN')
-      onProgress?.(fileName, 'Importing...')
+      onProgress?.(fileName, `Importing into ${bookCode}...`)
 
       const v = await client.query(
-        `INSERT INTO rep_file_versions (job_id, file_name, md5_hash, status, error_msg, rows_added, rows_updated, rows_skipped)
-         VALUES ($1, $2, $3, 'processing', NULL, 0, 0, 0)
-         ON CONFLICT (file_name, md5_hash) DO UPDATE
+        `INSERT INTO rep_file_versions (job_id, book_code, file_name, md5_hash, status, error_msg, rows_added, rows_updated, rows_skipped)
+         VALUES ($1, $2, $3, $4, 'processing', NULL, 0, 0, 0)
+         ON CONFLICT (book_code, file_name, md5_hash) DO UPDATE
            SET job_id     = EXCLUDED.job_id,
                status     = 'processing',
                error_msg  = NULL,
                rows_added = 0, rows_updated = 0, rows_skipped = 0,
                imported_at = NOW()
          RETURNING id`,
-        [jobId, fileName, hash],
+        [jobId, bookCode, fileName, hash],
       )
       const versionId = v.rows[0].id
 
       const fn = IMPORTERS[fileName]
-      const result = await fn(client, buf)
+      const result = await fn(client, buf, bookId)
 
       await client.query(
         `UPDATE rep_file_versions
@@ -652,10 +755,11 @@ export async function runImport(
     } catch (err: any) {
       try { await client.query('ROLLBACK') } catch {}
       await localPool.query(
-        `INSERT INTO rep_file_versions (job_id, file_name, md5_hash, status, error_msg)
-         VALUES ($1,$2,$3,'failed',$4)
-         ON CONFLICT (file_name, md5_hash) DO UPDATE SET status='failed', error_msg=EXCLUDED.error_msg`,
-        [jobId, fileName, hash, err.message],
+        `INSERT INTO rep_file_versions (job_id, book_code, file_name, md5_hash, status, error_msg)
+         VALUES ($1,$2,$3,$4,'failed',$5)
+         ON CONFLICT (book_code, file_name, md5_hash) DO UPDATE
+           SET status='failed', error_msg=EXCLUDED.error_msg`,
+        [jobId, bookCode, fileName, hash, err.message],
       )
       summary.push({ file: fileName, status: 'FAILED', error: err.message, durationMs: Date.now() - startedAt })
       onProgress?.(fileName, `FAILED: ${err.message}`)

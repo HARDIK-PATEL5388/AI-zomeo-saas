@@ -1,27 +1,52 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BookOpen, ChevronRight, ChevronDown, Loader2, Search } from 'lucide-react'
+import { BookOpen, ChevronRight, ChevronDown, Loader2, Search, Library } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-interface ChapterRow { chapter: string; rubric_count: number }
+interface BookRow {
+  id: number
+  code: string
+  name: string
+  description?: string | null
+  sort_order: number
+  chapter_count: number
+  rubric_count: number
+}
+interface ChapterRow {
+  chapter_id: number
+  chapter: string
+  code: string | null
+  sort_order: number
+  rubric_count: number
+}
 interface RubricRow {
+  rubric_id: number
+  book_id: number
   ext_id: number
   parent_ext_id: number | null
   depth: number
+  chapter_id: number | null
   chapter: string
   rubric_text: string
   full_path: string
   remedy_count: number
   child_count: number
+  book_code?: string
+  book_name?: string
 }
 interface RubricDetail extends RubricRow {
-  remedy_by_grade: Record<string, Array<{ id: number; rem_code: number; abbreviation: string; full_name?: string; common_name?: string }>>
+  book_code: string
+  book_name: string
+  remedy_by_grade: Record<
+    string,
+    Array<{ id: number; rem_code: number; abbreviation: string; full_name?: string; common_name?: string }>
+  >
 }
 
-async function localGet<T>(path: string): Promise<T> {
+async function api<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}/api/repertory-upload${path}`)
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -38,48 +63,76 @@ const GRADE_INFO: Record<number, { label: string; style: string }> = {
 }
 
 export default function RepertoryPage() {
-  const [selectedChapter, setSelectedChapter] = useState<string>()
-  const [selectedExtId, setSelectedExtId]     = useState<number>()
-  const [expanded, setExpanded]               = useState<Set<number>>(new Set())
+  const [selectedBook, setSelectedBook]       = useState<BookRow>()
+  const [expandedBooks, setExpandedBooks]     = useState<Set<string>>(new Set())
+  const [selectedChapter, setSelectedChapter] = useState<ChapterRow>()
+  const [selectedRubricId, setSelectedRubricId] = useState<number>()
+  const [expandedRubrics, setExpandedRubrics] = useState<Set<number>>(new Set())
   const [search, setSearch]                   = useState('')
+  const [searchScope, setSearchScope]         = useState<'book' | 'all'>('book')
 
-  // Chapters
-  const chaptersQ = useQuery({
-    queryKey: ['rep-chapters'],
-    queryFn:  () => localGet<{ data: ChapterRow[] }>('/browse/chapters'),
+  // Books
+  const booksQ = useQuery({
+    queryKey: ['rep-books'],
+    queryFn:  () => api<{ data: BookRow[] }>('/browse/books'),
   })
 
-  // Top-level rubrics for the chapter (parent IS NULL) OR search results
+  // Auto-select Complete on first load
+  useEffect(() => {
+    if (selectedBook || !booksQ.data?.data?.length) return
+    const complete = booksQ.data.data.find(b => b.code === 'complete') ?? booksQ.data.data[0]
+    setSelectedBook(complete)
+    setExpandedBooks(new Set([complete.code]))
+  }, [booksQ.data, selectedBook])
+
+  // Chapters for selected book (only fetched if a book is expanded)
+  const chaptersQ = useQuery({
+    queryKey: ['rep-chapters', selectedBook?.code],
+    queryFn:  () => api<{ data: ChapterRow[] }>(`/browse/chapters?book=${selectedBook!.code}`),
+    enabled:  !!selectedBook,
+  })
+
+  // Rubrics: either chapter browse or scoped/global search
+  const isSearching = search.trim().length >= 2
+
   const rubricsQ = useQuery({
-    queryKey: ['rep-rubrics', selectedChapter, search],
+    queryKey: ['rep-rubrics', selectedBook?.code, selectedChapter?.chapter_id, isSearching ? `q:${search.trim()}:${searchScope}` : 'top'],
     queryFn:  () => {
-      const params = new URLSearchParams()
-      if (selectedChapter) params.set('chapter', selectedChapter)
-      if (search.trim()) {
-        params.set('q', search.trim())
-        params.set('limit', '300')
-      } else {
-        params.set('parent', 'root')
-        params.set('limit', '500')
+      if (isSearching) {
+        const params = new URLSearchParams({ q: search.trim(), limit: '300' })
+        if (searchScope === 'book' && selectedBook) params.set('book', selectedBook.code)
+        return api<{ data: RubricRow[] }>(`/browse/search?${params.toString()}`)
       }
-      return localGet<{ data: RubricRow[] }>(`/browse/rubrics?${params.toString()}`)
+      const params = new URLSearchParams({
+        book: selectedBook!.code,
+        chapter: String(selectedChapter!.chapter_id),
+        parent: 'root',
+        limit: '500',
+      })
+      return api<{ data: RubricRow[] }>(`/browse/rubrics?${params.toString()}`)
     },
-    enabled: !!selectedChapter,
+    enabled: isSearching ? !!(searchScope === 'all' || selectedBook) : !!(selectedBook && selectedChapter),
   })
 
   // Rubric detail
   const detailQ = useQuery({
-    queryKey: ['rep-rubric-detail', selectedExtId],
-    queryFn:  () => localGet<{ data: RubricDetail }>(`/browse/rubrics/${selectedExtId}`),
-    enabled:  !!selectedExtId,
+    queryKey: ['rep-rubric-detail', selectedRubricId],
+    queryFn:  () => api<{ data: RubricDetail }>(`/browse/rubrics/${selectedRubricId}`),
+    enabled:  !!selectedRubricId,
   })
 
-  function toggleExpand(extId: number) {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      if (next.has(extId)) next.delete(extId)
-      else next.add(extId)
-      return next
+  function toggleBook(code: string) {
+    setExpandedBooks(prev => {
+      const n = new Set(prev)
+      n.has(code) ? n.delete(code) : n.add(code)
+      return n
+    })
+  }
+  function toggleRubric(extId: number) {
+    setExpandedRubrics(prev => {
+      const n = new Set(prev)
+      n.has(extId) ? n.delete(extId) : n.add(extId)
+      return n
     })
   }
 
@@ -90,53 +143,133 @@ export default function RepertoryPage() {
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-gray-900">Repertory Browser</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Browse imported repertory data from local Postgres ({chaptersQ.data?.data?.length ?? '—'} chapters)
+            {detailQ.data?.data
+              ? <>[<span className="font-medium">{detailQ.data.data.book_name}</span>]
+                  [<span className="font-medium capitalize">{detailQ.data.data.chapter}</span>]
+                  {' '}{detailQ.data.data.rubric_text}</>
+              : booksQ.data?.data
+                ? <>{booksQ.data.data.length} {booksQ.data.data.length === 1 ? 'book' : 'books'} ·
+                    {' '}{booksQ.data.data.reduce((s, b) => s + b.rubric_count, 0).toLocaleString()} rubrics total</>
+                : 'Loading repertory…'}
           </p>
         </div>
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search rubrics..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border bg-gray-50 p-0.5 text-xs">
+            <button
+              onClick={() => setSearchScope('book')}
+              className={`px-2.5 py-1 rounded-md transition ${
+                searchScope === 'book' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'
+              }`}
+              title="Search only inside the selected book"
+            >This book</button>
+            <button
+              onClick={() => setSearchScope('all')}
+              className={`px-2.5 py-1 rounded-md transition ${
+                searchScope === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-800'
+              }`}
+              title="Search across every book"
+            >All books</button>
+          </div>
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search rubrics..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64"
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Chapters column */}
-        <div className="w-64 border-r bg-white flex flex-col">
+        {/* Books / chapters tree */}
+        <div className="w-72 border-r bg-white flex flex-col">
           <div className="px-4 py-3 border-b">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Chapters</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Repertories</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {chaptersQ.isLoading ? (
+            {booksQ.isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
-            ) : chaptersQ.error ? (
+            ) : booksQ.error ? (
               <p className="px-4 py-6 text-sm text-red-500 text-center">
-                {(chaptersQ.error as Error).message}
+                {(booksQ.error as Error).message}
               </p>
-            ) : !(chaptersQ.data?.data?.length) ? (
-              <p className="px-4 py-6 text-sm text-gray-400 text-center">No chapters found.<br/>Upload TAB files first.</p>
+            ) : !(booksQ.data?.data?.length) ? (
+              <p className="px-4 py-6 text-sm text-gray-400 text-center">
+                No books yet. Upload TAB files to populate.
+              </p>
             ) : (
-              chaptersQ.data.data.map((ch) => (
-                <button
-                  key={ch.chapter}
-                  onClick={() => { setSelectedChapter(ch.chapter); setSelectedExtId(undefined); setExpanded(new Set()) }}
-                  className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 text-sm text-left transition-colors ${
-                    selectedChapter === ch.chapter
-                      ? 'bg-emerald-50 text-emerald-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="truncate capitalize">{ch.chapter}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{ch.rubric_count.toLocaleString()}</span>
-                </button>
-              ))
+              booksQ.data.data.map((book) => {
+                const isOpen = expandedBooks.has(book.code)
+                const isSelected = selectedBook?.code === book.code
+                return (
+                  <div key={book.code}>
+                    <div
+                      className={`flex items-center gap-1 px-3 py-2 text-sm cursor-pointer transition-colors ${
+                        isSelected ? 'bg-emerald-50 text-emerald-700' : 'text-gray-800 hover:bg-gray-50'
+                      }`}
+                    >
+                      <button
+                        onClick={() => toggleBook(book.code)}
+                        className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-700 shrink-0"
+                      >
+                        {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedBook(book)
+                          setExpandedBooks(prev => new Set(prev).add(book.code))
+                          setSelectedChapter(undefined)
+                          setSelectedRubricId(undefined)
+                          setExpandedRubrics(new Set())
+                        }}
+                        className="flex-1 flex items-center justify-between gap-2 text-left min-w-0"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <Library className="w-4 h-4 shrink-0 text-gray-400" />
+                          <span className="truncate font-medium">{book.name}</span>
+                        </span>
+                        <span className="text-xs text-gray-400 shrink-0">({book.chapter_count})</span>
+                      </button>
+                    </div>
+                    {isOpen && isSelected && (
+                      <div className="bg-gray-50/40">
+                        {chaptersQ.isLoading ? (
+                          <div className="py-2 pl-10">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                          </div>
+                        ) : chaptersQ.data?.data?.length ? (
+                          chaptersQ.data.data.map((ch) => (
+                            <button
+                              key={ch.chapter_id}
+                              onClick={() => {
+                                setSelectedChapter(ch)
+                                setSelectedRubricId(undefined)
+                                setExpandedRubrics(new Set())
+                                setSearch('')
+                              }}
+                              className={`w-full flex items-center justify-between gap-2 pl-10 pr-3 py-1.5 text-sm text-left transition-colors ${
+                                selectedChapter?.chapter_id === ch.chapter_id
+                                  ? 'bg-emerald-100 text-emerald-800 font-medium'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              <span className="truncate capitalize">{ch.chapter}</span>
+                              <span className="text-xs text-gray-400 shrink-0">{ch.rubric_count.toLocaleString()}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="pl-10 py-2 text-xs text-gray-400">No chapters</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
@@ -145,15 +278,21 @@ export default function RepertoryPage() {
         <div className="w-96 border-r bg-white flex flex-col">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {search.trim() ? 'Search Results' : 'Top-Level Rubrics'}
+              {isSearching
+                ? `Search: ${searchScope === 'all' ? 'All books' : selectedBook?.name ?? '—'}`
+                : selectedChapter
+                  ? `${selectedChapter.chapter} — top-level`
+                  : 'Top-level rubrics'}
             </p>
             {rubricsQ.data?.data && (
               <span className="text-xs text-gray-400">{rubricsQ.data.data.length}</span>
             )}
           </div>
           <div className="flex-1 overflow-y-auto">
-            {!selectedChapter ? (
-              <p className="px-4 py-6 text-sm text-gray-400 text-center">Select a chapter</p>
+            {!isSearching && !selectedChapter ? (
+              <p className="px-4 py-6 text-sm text-gray-400 text-center">
+                Select a chapter from a book to begin
+              </p>
             ) : rubricsQ.isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
@@ -163,12 +302,13 @@ export default function RepertoryPage() {
             ) : (
               rubricsQ.data.data.map((r) => (
                 <RubricNode
-                  key={r.ext_id}
+                  key={r.rubric_id}
                   rubric={r}
-                  expanded={expanded}
-                  onToggle={toggleExpand}
-                  selectedExtId={selectedExtId}
-                  onSelect={setSelectedExtId}
+                  showBook={isSearching && searchScope === 'all'}
+                  expanded={expandedRubrics}
+                  onToggle={toggleRubric}
+                  selectedRubricId={selectedRubricId}
+                  onSelect={setSelectedRubricId}
                   level={0}
                 />
               ))
@@ -178,7 +318,7 @@ export default function RepertoryPage() {
 
         {/* Rubric detail */}
         <div className="flex-1 bg-gray-50 overflow-y-auto">
-          {!selectedExtId ? (
+          {!selectedRubricId ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <BookOpen className="w-12 h-12 mb-3 opacity-20" />
               <p className="text-sm">Select a rubric to view remedies</p>
@@ -191,9 +331,18 @@ export default function RepertoryPage() {
             <div className="p-6 text-sm text-red-600">{(detailQ.error as Error).message}</div>
           ) : detailQ.data?.data ? (
             <div className="p-6">
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1 capitalize">{detailQ.data.data.chapter}</p>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 text-[11px] font-medium rounded bg-emerald-100 text-emerald-800">
+                  {detailQ.data.data.book_name}
+                </span>
+                <span className="text-xs uppercase tracking-wide text-gray-500 capitalize">
+                  {detailQ.data.data.chapter}
+                </span>
+              </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-1">{detailQ.data.data.full_path}</h2>
-              <p className="text-sm text-gray-500 mb-6">{detailQ.data.data.remedy_count.toLocaleString()} remedies · ext_id {detailQ.data.data.ext_id}</p>
+              <p className="text-sm text-gray-500 mb-6">
+                {detailQ.data.data.remedy_count.toLocaleString()} remedies · rubric_id {detailQ.data.data.rubric_id}
+              </p>
 
               {detailQ.data.data.remedy_count === 0 ? (
                 <p className="text-sm text-gray-400 italic">No remedies for this rubric.</p>
@@ -235,29 +384,32 @@ export default function RepertoryPage() {
 
 // Recursive rubric tree node — lazy-loads children on expand
 function RubricNode({
-  rubric, expanded, onToggle, selectedExtId, onSelect, level,
+  rubric, showBook, expanded, onToggle, selectedRubricId, onSelect, level,
 }: {
   rubric: RubricRow
+  showBook: boolean
   expanded: Set<number>
   onToggle: (extId: number) => void
-  selectedExtId?: number
-  onSelect: (extId: number) => void
+  selectedRubricId?: number
+  onSelect: (rubricId: number) => void
   level: number
 }) {
   const isOpen = expanded.has(rubric.ext_id)
   const hasChildren = rubric.child_count > 0
 
   const childrenQ = useQuery({
-    queryKey: ['rep-children', rubric.ext_id],
-    queryFn:  () => localGet<{ data: RubricRow[] }>(`/browse/rubrics?parent=${rubric.ext_id}&limit=500`),
-    enabled:  isOpen && hasChildren,
+    queryKey: ['rep-children', rubric.book_id, rubric.ext_id],
+    queryFn:  () => api<{ data: RubricRow[] }>(
+      `/browse/rubrics?book=${rubric.book_code ?? 'complete'}&parent=${rubric.ext_id}&limit=500`,
+    ),
+    enabled:  isOpen && hasChildren && !!rubric.book_code,
   })
 
   return (
     <div>
       <div
         className={`flex items-center gap-1 px-2 py-1.5 text-sm cursor-pointer transition-colors ${
-          selectedExtId === rubric.ext_id
+          selectedRubricId === rubric.rubric_id
             ? 'bg-emerald-50 text-emerald-700 font-medium'
             : 'hover:bg-gray-50 text-gray-700'
         }`}
@@ -274,10 +426,17 @@ function RubricNode({
           <span className="w-4 shrink-0" />
         )}
         <button
-          onClick={() => onSelect(rubric.ext_id)}
+          onClick={() => onSelect(rubric.rubric_id)}
           className="flex-1 flex items-center justify-between gap-2 text-left min-w-0"
         >
-          <span className="truncate">{rubric.rubric_text}</span>
+          <span className="truncate flex items-center gap-2 min-w-0">
+            {showBook && rubric.book_name && (
+              <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-100 text-emerald-800 shrink-0">
+                {rubric.book_name}
+              </span>
+            )}
+            <span className="truncate">{rubric.rubric_text}</span>
+          </span>
           <span className="text-xs text-gray-400 shrink-0">{rubric.remedy_count}</span>
         </button>
       </div>
@@ -290,11 +449,12 @@ function RubricNode({
           )}
           {childrenQ.data?.data?.map((child) => (
             <RubricNode
-              key={child.ext_id}
+              key={child.rubric_id}
               rubric={child}
+              showBook={false}
               expanded={expanded}
               onToggle={onToggle}
-              selectedExtId={selectedExtId}
+              selectedRubricId={selectedRubricId}
               onSelect={onSelect}
               level={level + 1}
             />

@@ -38,6 +38,102 @@ repertoryUploadRoutes.get('/required', (c) =>
   c.json({ files: REQUIRED_FILES, importOrder: IMPORT_ORDER }),
 )
 
+// ─── Books CRUD (used by the upload wizard) ────────────────────────────
+function normalizeBookCode(raw: string): string {
+  // First token only, lowercase, slug-safe — so "Kent Repertory" → "kent".
+  const first = raw.toLowerCase().trim().split(/\s+/)[0] ?? ''
+  return first
+    .replace(/[^a-z0-9_-]/g, '')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
+repertoryUploadRoutes.get('/books', async (c) => {
+  const r = await localPool.query(
+    `SELECT
+       b.id, b.code, b.name, b.description, b.sort_order, b.is_active, b.created_at,
+       (SELECT COUNT(*) FROM rep_book_chapters bc WHERE bc.book_id = b.id)::int AS chapter_count,
+       (SELECT COUNT(*) FROM rep_rubrics       r  WHERE r.book_id  = b.id)::int AS rubric_count
+     FROM rep_books b
+     WHERE b.is_active
+     ORDER BY b.sort_order, b.name`,
+  )
+  return c.json({ data: r.rows })
+})
+
+repertoryUploadRoutes.post('/books', async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ error: 'Invalid JSON' }, 400) }
+  const rawCode = String(body?.code ?? '').trim()
+  const name    = String(body?.name ?? '').trim()
+  const description = body?.description ? String(body.description).slice(0, 500) : null
+
+  if (!name)    return c.json({ error: 'name is required' }, 400)
+  if (!rawCode) return c.json({ error: 'code is required' }, 400)
+
+  const code = normalizeBookCode(rawCode)
+  if (!code || code.length < 2) {
+    return c.json({ error: `Code "${rawCode}" normalizes to "${code}" — too short` }, 400)
+  }
+
+  const existing = await localPool.query(`SELECT id, code, name FROM rep_books WHERE code=$1`, [code])
+  if ((existing.rowCount ?? 0) > 0) {
+    return c.json(
+      { error: `Book code "${code}" already exists (${existing.rows[0].name})`, existing: existing.rows[0] },
+      409,
+    )
+  }
+
+  const sortRes = await localPool.query(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM rep_books`)
+  const sortOrder = sortRes.rows[0].next as number
+
+  const ins = await localPool.query(
+    `INSERT INTO rep_books (code, name, description, sort_order)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, code, name, description, sort_order, is_active, created_at`,
+    [code, name, description, sortOrder],
+  )
+  return c.json({ data: { ...ins.rows[0], chapter_count: 0, rubric_count: 0 } }, 201)
+})
+
+// Upload history grouped by book → used by the wizard summary panel.
+repertoryUploadRoutes.get('/jobs/by-book', async (c) => {
+  const limit = Math.min(500, parseInt(c.req.query('limit') ?? '200'))
+  const r = await localPool.query(
+    `SELECT
+        COALESCE(b.code, fv.book_code, 'unknown') AS book_code,
+        COALESCE(b.name, INITCAP(COALESCE(fv.book_code, 'Unknown'))) AS book_name,
+        b.sort_order,
+        fv.id, fv.job_id, fv.file_name, fv.status, fv.error_msg,
+        fv.rows_added, fv.rows_updated, fv.rows_skipped,
+        fv.imported_at, fv.md5_hash
+       FROM rep_file_versions fv
+       LEFT JOIN rep_books b ON b.code = fv.book_code
+      ORDER BY b.sort_order NULLS LAST, fv.imported_at DESC
+      LIMIT $1`,
+    [limit],
+  )
+
+  const grouped = new Map<string, { code: string; name: string; entries: any[] }>()
+  for (const row of r.rows) {
+    const key = row.book_code
+    if (!grouped.has(key)) grouped.set(key, { code: key, name: row.book_name, entries: [] })
+    grouped.get(key)!.entries.push({
+      id: row.id,
+      job_id: row.job_id,
+      file_name: row.file_name,
+      status: row.status,
+      error_msg: row.error_msg,
+      rows_added: row.rows_added,
+      rows_updated: row.rows_updated,
+      rows_skipped: row.rows_skipped,
+      imported_at: row.imported_at,
+      md5_hash: row.md5_hash,
+    })
+  }
+  return c.json({ data: Array.from(grouped.values()) })
+})
+
 type ReadResult =
   | { ok: true;  files: Map<string, Buffer>; metadata: JobMetadata }
   | { ok: false; status: 400 | 413; error: string }
@@ -83,6 +179,10 @@ async function readFormPayload(c: any): Promise<ReadResult> {
       if (key === 'source') metadata.source = value.slice(0, 100)
       else if (key === 'year') metadata.year = parseInt(value) || undefined
       else if (key === 'version') metadata.version = value.slice(0, 50)
+      else if (key === 'bookCode') {
+        metadata.bookCode = value.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined
+      }
+      else if (key === 'bookName') metadata.bookName = value.slice(0, 100)
     }
   }
   return { ok: true, files, metadata }
@@ -185,8 +285,9 @@ repertoryUploadRoutes.post('/import-async', async (c) => {
 repertoryUploadRoutes.delete('/data', async (c) => {
   const withHistory = c.req.query('withHistory') === '1'
   const tables = [
-    'rep_xrefs', 'rep_remlist', 'rep_papasub', 'rep_library_index',
-    'rep_page_refs', 'rep_polar_pairs', 'rep_rubrics', 'rep_remedies',
+    'rep_xrefs', 'rep_rubric_remedies', 'rep_papasub', 'rep_library_index',
+    'rep_page_refs', 'rep_polar_pairs', 'rep_rubrics', 'rep_book_chapters',
+    'rep_remedies',
   ]
   await localPool.query(`TRUNCATE ${tables.join(', ')} RESTART IDENTITY`)
   if (withHistory) {
@@ -225,94 +326,157 @@ repertoryUploadRoutes.get('/status', async (c) => {
   return c.json({ ...job, logs: jobProgress.get(id) ?? [] })
 })
 
-// ─── Browse endpoints — read imported rep_* data ──────────────────────────
-// GET /api/repertory-upload/browse/chapters → distinct chapters + rubric counts
-repertoryUploadRoutes.get('/browse/chapters', async (c) => {
+// ─── Browse endpoints — book-scoped repertory data ─────────────────────
+// Identifier convention:
+//   • `book` query param accepts the book CODE (e.g. 'complete', 'kent').
+//   • `rubric_id` is the global surrogate id from rep_rubrics.
+//   • `ext_id` is meaningful only WITHIN a book.
+
+// Resolve a book code → row. Returns null if not found.
+async function getBookByCode(code: string) {
   const r = await localPool.query(
-    `SELECT chapter, COUNT(*)::int AS rubric_count
-     FROM rep_rubrics
-     WHERE chapter IS NOT NULL AND chapter <> ''
-     GROUP BY chapter
-     ORDER BY chapter`,
+    `SELECT id, code, name, sort_order FROM rep_books WHERE code=$1 AND is_active`,
+    [code],
+  )
+  return r.rows[0] ?? null
+}
+
+// GET /api/repertory-upload/browse/books → list books with chapter / rubric counts
+repertoryUploadRoutes.get('/browse/books', async (c) => {
+  const r = await localPool.query(
+    `SELECT
+       b.id, b.code, b.name, b.description, b.sort_order, b.is_active,
+       (SELECT COUNT(*) FROM rep_book_chapters bc WHERE bc.book_id = b.id)::int AS chapter_count,
+       (SELECT COUNT(*) FROM rep_rubrics       r  WHERE r.book_id  = b.id)::int AS rubric_count
+     FROM rep_books b
+     WHERE b.is_active
+     ORDER BY b.sort_order, b.name`,
   )
   return c.json({ data: r.rows })
 })
 
-// GET /api/repertory-upload/browse/rubrics?chapter=X[&parent=N][&limit=N][&q=text]
+// GET /api/repertory-upload/browse/chapters?book=complete
+repertoryUploadRoutes.get('/browse/chapters', async (c) => {
+  const code = c.req.query('book') || 'complete'
+  const book = await getBookByCode(code)
+  if (!book) return c.json({ data: [] })
+
+  const r = await localPool.query(
+    `SELECT
+        bc.id   AS chapter_id,
+        bc.name AS chapter,
+        bc.code,
+        bc.sort_order,
+        (SELECT COUNT(*) FROM rep_rubrics r
+          WHERE r.book_id = bc.book_id AND r.chapter_id = bc.id)::int AS rubric_count
+       FROM rep_book_chapters bc
+      WHERE bc.book_id = $1
+      ORDER BY bc.sort_order, bc.name`,
+    [book.id],
+  )
+  return c.json({
+    data: r.rows,
+    book: { id: book.id, code: book.code, name: book.name },
+  })
+})
+
+// GET /api/repertory-upload/browse/rubrics?book=complete&chapter=Mind&parent=root|<ext_id>&q=...
 repertoryUploadRoutes.get('/browse/rubrics', async (c) => {
-  const chapter   = c.req.query('chapter')
-  const parent    = c.req.query('parent')           // ext_id of parent, or 'root'
+  const code      = c.req.query('book') || 'complete'
+  const chapter   = c.req.query('chapter')           // chapter NAME (legacy) or numeric chapter_id
+  const parent    = c.req.query('parent')            // ext_id of parent, or 'root'
   const limit     = Math.min(500, parseInt(c.req.query('limit') ?? '200'))
   const q         = c.req.query('q')
 
-  const where: string[] = []
-  const params: any[] = []
-  let p = 1
+  const book = await getBookByCode(code)
+  if (!book) return c.json({ data: [] })
 
-  if (chapter) { where.push(`chapter = $${p++}`); params.push(chapter) }
-  if (parent === 'root' || parent === 'null' || parent === '') {
-    // "root" = top-level for the chapter = rubrics at the minimum depth in that chapter.
-    // Fallback to NULL parent if no chapter is provided.
-    if (chapter) {
-      where.push(`depth = (SELECT MIN(depth) FROM rep_rubrics WHERE chapter = $${p++})`)
-      params.push(chapter)
+  const where: string[] = ['r.book_id = $1']
+  const params: any[] = [book.id]
+  let p = 2
+
+  if (chapter) {
+    if (/^\d+$/.test(chapter)) {
+      where.push(`r.chapter_id = $${p++}`); params.push(parseInt(chapter))
     } else {
-      where.push(`parent_ext_id IS NULL`)
+      where.push(`r.chapter = $${p++}`); params.push(chapter)
+    }
+  }
+  if (parent === 'root' || parent === 'null' || parent === '') {
+    if (chapter) {
+      // top-level for the chapter = rubrics at the minimum depth in that chapter
+      const depthFilter = /^\d+$/.test(chapter)
+        ? `(SELECT MIN(depth) FROM rep_rubrics WHERE book_id = $1 AND chapter_id = $${p++})`
+        : `(SELECT MIN(depth) FROM rep_rubrics WHERE book_id = $1 AND chapter   = $${p++})`
+      where.push(`r.depth = ${depthFilter}`)
+      params.push(/^\d+$/.test(chapter) ? parseInt(chapter) : chapter)
+    } else {
+      where.push(`r.parent_ext_id IS NULL`)
     }
   } else if (parent) {
-    where.push(`parent_ext_id = $${p++}`); params.push(parseInt(parent))
+    where.push(`r.parent_ext_id = $${p++}`); params.push(parseInt(parent))
   }
   if (q) {
-    where.push(`rubric_text ILIKE $${p++}`); params.push(`%${q}%`)
+    where.push(`r.rubric_text ILIKE $${p++}`); params.push(`%${q}%`)
   }
 
-  // Derive a clean display name: full_path with trailing " > $" markers stripped,
-  // then take the last segment. Falls back to rubric_text.
   const sql = `
     SELECT
-      r.ext_id, r.parent_ext_id, r.depth, r.chapter, r.full_path,
+      r.rubric_id, r.book_id, r.ext_id, r.parent_ext_id, r.depth,
+      r.chapter_id, r.chapter, r.full_path,
       COALESCE(
         NULLIF(regexp_replace(split_part(regexp_replace(r.full_path, '( > \\$)+$', ''), ' > ', -1), '^\\$$', ''), ''),
         NULLIF(r.rubric_text, '$'),
         r.rubric_text
       ) AS rubric_text,
-      (SELECT COUNT(*) FROM rep_remlist rl WHERE rl.rubric_ext_id = r.ext_id)::int AS remedy_count,
-      (SELECT COUNT(*) FROM rep_rubrics c  WHERE c.parent_ext_id = r.ext_id)::int AS child_count
+      b.code AS book_code, b.name AS book_name,
+      (SELECT COUNT(*) FROM rep_rubric_remedies rr
+        WHERE rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id)::int AS remedy_count,
+      (SELECT COUNT(*) FROM rep_rubrics c
+        WHERE c.book_id = r.book_id AND c.parent_ext_id = r.ext_id)::int AS child_count
     FROM rep_rubrics r
-    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    JOIN rep_books   b ON b.id = r.book_id
+    WHERE ${where.join(' AND ')}
     ORDER BY rubric_text
     LIMIT ${limit}
   `
   const r = await localPool.query(sql, params)
-  return c.json({ data: r.rows })
+  return c.json({
+    data: r.rows,
+    book: { id: book.id, code: book.code, name: book.name },
+  })
 })
 
-// GET /api/repertory-upload/browse/rubrics/:ext_id → rubric + remedies grouped by grade
-repertoryUploadRoutes.get('/browse/rubrics/:ext_id', async (c) => {
-  const extId = parseInt(c.req.param('ext_id'))
-  if (!Number.isFinite(extId)) return c.json({ error: 'Invalid ext_id' }, 400)
+// GET /api/repertory-upload/browse/rubrics/:rubric_id → rubric + remedies (book-aware)
+repertoryUploadRoutes.get('/browse/rubrics/:rubric_id', async (c) => {
+  const rubricId = parseInt(c.req.param('rubric_id'))
+  if (!Number.isFinite(rubricId)) return c.json({ error: 'Invalid rubric_id' }, 400)
 
   const rRes = await localPool.query(
     `SELECT
-       ext_id, parent_ext_id, depth, chapter, full_path,
+       r.rubric_id, r.book_id, r.ext_id, r.parent_ext_id, r.depth,
+       r.chapter_id, r.chapter, r.full_path,
        COALESCE(
-         NULLIF(regexp_replace(split_part(regexp_replace(full_path, '( > \\$)+$', ''), ' > ', -1), '^\\$$', ''), ''),
-         NULLIF(rubric_text, '$'),
-         rubric_text
-       ) AS rubric_text
-     FROM rep_rubrics WHERE ext_id = $1`,
-    [extId],
+         NULLIF(regexp_replace(split_part(regexp_replace(r.full_path, '( > \\$)+$', ''), ' > ', -1), '^\\$$', ''), ''),
+         NULLIF(r.rubric_text, '$'),
+         r.rubric_text
+       ) AS rubric_text,
+       b.code AS book_code, b.name AS book_name
+     FROM rep_rubrics r
+     JOIN rep_books   b ON b.id = r.book_id
+     WHERE r.rubric_id = $1`,
+    [rubricId],
   )
   if (rRes.rowCount === 0) return c.json({ error: 'Rubric not found' }, 404)
   const rubric = rRes.rows[0]
 
   const remRes = await localPool.query(
-    `SELECT rl.rem_code, rl.grade, rm.abbreviation, rm.full_name, rm.common_name
-     FROM rep_remlist rl
-     LEFT JOIN rep_remedies rm ON rm.rem_code = rl.rem_code
-     WHERE rl.rubric_ext_id = $1
-     ORDER BY rl.grade DESC, rm.abbreviation`,
-    [extId],
+    `SELECT rr.rem_code, rr.grade, rm.abbreviation, rm.full_name, rm.common_name
+       FROM rep_rubric_remedies rr
+       LEFT JOIN rep_remedies rm ON rm.rem_code = rr.rem_code
+      WHERE rr.book_id = $1 AND rr.rubric_ext_id = $2
+      ORDER BY rr.grade DESC, rm.abbreviation`,
+    [rubric.book_id, rubric.ext_id],
   )
   const grouped: Record<string, any[]> = { grade_4: [], grade_3: [], grade_2: [], grade_1: [] }
   for (const row of remRes.rows) {
@@ -333,6 +497,46 @@ repertoryUploadRoutes.get('/browse/rubrics/:ext_id', async (c) => {
       remedy_by_grade: grouped,
     },
   })
+})
+
+// GET /api/repertory-upload/browse/search?q=anxiety[&book=complete]
+// When `book` is omitted, searches across all active books.
+repertoryUploadRoutes.get('/browse/search', async (c) => {
+  const q     = (c.req.query('q') || '').trim()
+  const code  = c.req.query('book')
+  const limit = Math.min(500, parseInt(c.req.query('limit') ?? '100'))
+  if (q.length < 2) return c.json({ data: [] })
+
+  const where: string[] = ['r.rubric_text ILIKE $1']
+  const params: any[] = [`%${q}%`]
+  let p = 2
+
+  if (code) {
+    const book = await getBookByCode(code)
+    if (!book) return c.json({ data: [] })
+    where.push(`r.book_id = $${p++}`); params.push(book.id)
+  }
+
+  const sql = `
+    SELECT
+      r.rubric_id, r.book_id, r.ext_id, r.parent_ext_id, r.depth,
+      r.chapter_id, r.chapter, r.full_path,
+      COALESCE(
+        NULLIF(regexp_replace(split_part(regexp_replace(r.full_path, '( > \\$)+$', ''), ' > ', -1), '^\\$$', ''), ''),
+        NULLIF(r.rubric_text, '$'),
+        r.rubric_text
+      ) AS rubric_text,
+      b.code AS book_code, b.name AS book_name,
+      (SELECT COUNT(*) FROM rep_rubric_remedies rr
+        WHERE rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id)::int AS remedy_count
+    FROM rep_rubrics r
+    JOIN rep_books   b ON b.id = r.book_id AND b.is_active
+    WHERE ${where.join(' AND ')}
+    ORDER BY b.sort_order, b.name, rubric_text
+    LIMIT ${limit}
+  `
+  const r = await localPool.query(sql, params)
+  return c.json({ data: r.rows, meta: { query: q, scope: code || 'all' } })
 })
 
 repertoryUploadRoutes.get('/jobs/:id/stream', async (c) => {

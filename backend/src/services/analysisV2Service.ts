@@ -13,6 +13,10 @@ export type AnalysisMethod = 'kent' | 'weighted'
 
 export interface RubricSearchHit {
   ext_id: number
+  rubric_id: number
+  book_id: number
+  book_code: string
+  book_name: string
   rubric_text: string
   full_path: string | null
   chapter: string | null
@@ -24,6 +28,10 @@ export interface SelectedRubric {
   id: number
   case_id: string
   rubric_ext_id: number
+  rubric_id: number
+  book_id: number
+  book_code: string
+  book_name: string
   weight: number
   intensity: 'high' | 'mid' | 'low' | null
   symptom_note: string | null
@@ -74,59 +82,65 @@ export async function verifyCaseAccess(caseId: string, clinicId: string): Promis
 
 // ─── Search ────────────────────────────────────────────────────────────────
 
-export async function searchRubrics(query: string, limit = 25): Promise<RubricSearchHit[]> {
+export async function searchRubrics(
+  query: string,
+  limit = 25,
+  bookCode?: string,
+): Promise<RubricSearchHit[]> {
   if (!query || query.trim().length < 2) return []
   const q = `%${query.trim()}%`
+  const prefix = `${query.trim()}%`
+  const params: any[] = [q, prefix, limit]
+  let bookFilter = ''
+  if (bookCode) {
+    params.push(bookCode)
+    bookFilter = `AND b.code = $${params.length}`
+  }
   const sql = `
     SELECT
-      r.ext_id,
-      r.rubric_text,
-      r.full_path,
-      r.chapter,
-      r.depth,
-      COALESCE(rc.cnt, 0)::int AS remedy_count
+      r.ext_id, r.rubric_id, r.book_id,
+      b.code AS book_code, b.name AS book_name,
+      r.rubric_text, r.full_path, r.chapter, r.depth,
+      (SELECT COUNT(*) FROM rep_rubric_remedies rr
+        WHERE rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id)::int AS remedy_count
     FROM rep_rubrics r
-    LEFT JOIN (
-      SELECT rubric_ext_id, COUNT(*) AS cnt
-      FROM rep_remlist
-      GROUP BY rubric_ext_id
-    ) rc ON rc.rubric_ext_id = r.ext_id
-    WHERE r.rubric_text ILIKE $1 OR r.full_path ILIKE $1
+    JOIN rep_books   b ON b.id = r.book_id AND b.is_active
+    WHERE (r.rubric_text ILIKE $1 OR r.full_path ILIKE $1) ${bookFilter}
     ORDER BY
       CASE WHEN r.rubric_text ILIKE $2 THEN 0 ELSE 1 END,
-      r.depth,
-      LENGTH(r.rubric_text)
+      b.sort_order, r.depth, LENGTH(r.rubric_text)
     LIMIT $3
   `
-  const prefix = `${query.trim()}%`
-  const r = await pool.query(sql, [q, prefix, limit])
+  const r = await pool.query(sql, params)
   return r.rows
 }
 
-export async function searchSymptoms(query: string, limit = 30): Promise<RubricSearchHit[]> {
-  // Broader fuzzy match — uses pg_trgm similarity if available.
+export async function searchSymptoms(
+  query: string,
+  limit = 30,
+  bookCode?: string,
+): Promise<RubricSearchHit[]> {
   if (!query || query.trim().length < 2) return []
+  const params: any[] = [`%${query.trim()}%`, query.trim(), limit]
+  let bookFilter = ''
+  if (bookCode) {
+    params.push(bookCode)
+    bookFilter = `AND b.code = $${params.length}`
+  }
   const sql = `
     SELECT
-      r.ext_id,
-      r.rubric_text,
-      r.full_path,
-      r.chapter,
-      r.depth,
-      COALESCE(rc.cnt, 0)::int AS remedy_count
+      r.ext_id, r.rubric_id, r.book_id,
+      b.code AS book_code, b.name AS book_name,
+      r.rubric_text, r.full_path, r.chapter, r.depth,
+      (SELECT COUNT(*) FROM rep_rubric_remedies rr
+        WHERE rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id)::int AS remedy_count
     FROM rep_rubrics r
-    LEFT JOIN (
-      SELECT rubric_ext_id, COUNT(*) AS cnt
-      FROM rep_remlist
-      GROUP BY rubric_ext_id
-    ) rc ON rc.rubric_ext_id = r.ext_id
-    WHERE r.rubric_text ILIKE $1
-       OR r.full_path  ILIKE $1
-       OR r.chapter    ILIKE $1
-    ORDER BY similarity(r.rubric_text, $2) DESC NULLS LAST, r.depth
+    JOIN rep_books   b ON b.id = r.book_id AND b.is_active
+    WHERE (r.rubric_text ILIKE $1 OR r.full_path ILIKE $1 OR r.chapter ILIKE $1) ${bookFilter}
+    ORDER BY similarity(r.rubric_text, $2) DESC NULLS LAST, b.sort_order, r.depth
     LIMIT $3
   `
-  const r = await pool.query(sql, [`%${query.trim()}%`, query.trim(), limit])
+  const r = await pool.query(sql, params)
   return r.rows
 }
 
@@ -136,7 +150,7 @@ export async function listCaseRubrics(caseId: string, sort: 'added' | 'weight' |
   const orderBy = sort === 'weight'
     ? 'crr.weight DESC, crr.created_at ASC'
     : sort === 'chapter'
-    ? 'r.chapter ASC NULLS LAST, crr.created_at ASC'
+    ? 'b.sort_order ASC, r.chapter ASC NULLS LAST, crr.created_at ASC'
     : 'crr.sort_order ASC, crr.created_at ASC'
 
   const sql = `
@@ -144,6 +158,10 @@ export async function listCaseRubrics(caseId: string, sort: 'added' | 'weight' |
       crr.id,
       crr.case_id,
       crr.rubric_ext_id,
+      crr.rubric_id,
+      crr.book_id,
+      b.code AS book_code,
+      b.name AS book_name,
       crr.weight,
       crr.intensity,
       crr.symptom_note,
@@ -151,14 +169,11 @@ export async function listCaseRubrics(caseId: string, sort: 'added' | 'weight' |
       r.rubric_text,
       r.full_path,
       r.chapter,
-      COALESCE(rc.cnt, 0)::int AS remedy_count
+      (SELECT COUNT(*) FROM rep_rubric_remedies rr
+        WHERE rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id)::int AS remedy_count
     FROM case_rep_rubrics crr
-    JOIN rep_rubrics r ON r.ext_id = crr.rubric_ext_id
-    LEFT JOIN (
-      SELECT rubric_ext_id, COUNT(*) AS cnt
-      FROM rep_remlist
-      GROUP BY rubric_ext_id
-    ) rc ON rc.rubric_ext_id = crr.rubric_ext_id
+    JOIN rep_rubrics r ON r.rubric_id = crr.rubric_id
+    JOIN rep_books   b ON b.id = r.book_id
     WHERE crr.case_id = $1
     ORDER BY ${orderBy}
   `
@@ -166,9 +181,16 @@ export async function listCaseRubrics(caseId: string, sort: 'added' | 'weight' |
   return r.rows
 }
 
+/**
+ * Add a rubric to a case. Accepts the surrogate rubric_id — the only
+ * identifier that uniquely points to one row regardless of book.
+ *
+ * The legacy signature (caseId, rubricExtId, opts) still works; in that
+ * case the resolver assumes the 'complete' book to preserve old callers.
+ */
 export async function addCaseRubric(
   caseId: string,
-  rubricExtId: number,
+  rubricRef: number | { rubricId: number } | { bookCode: string; rubricExtId: number },
   opts: { weight?: number; intensity?: 'high' | 'mid' | 'low'; symptom_note?: string; added_by?: string }
 ): Promise<SelectedRubric> {
   const weight = opts.weight ?? 1
@@ -176,47 +198,92 @@ export async function addCaseRubric(
   const note = opts.symptom_note ?? null
   const addedBy = opts.added_by ?? null
 
-  const upsert = `
-    INSERT INTO case_rep_rubrics (case_id, rubric_ext_id, weight, intensity, symptom_note, added_by)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (case_id, rubric_ext_id)
-      DO UPDATE SET weight = EXCLUDED.weight,
-                    intensity = EXCLUDED.intensity,
-                    symptom_note = EXCLUDED.symptom_note
-    RETURNING id
-  `
-  await pool.query(upsert, [caseId, rubricExtId, weight, intensity, note, addedBy])
+  // Resolve rubric_id, book_id, ext_id from whatever the caller supplied.
+  let resolved: { rubric_id: number; book_id: number; ext_id: number } | null = null
+  if (typeof rubricRef === 'number') {
+    const r = await pool.query(
+      `SELECT rubric_id, book_id, ext_id FROM rep_rubrics
+        WHERE ext_id=$1 AND book_id=(SELECT id FROM rep_books WHERE code='complete')`,
+      [rubricRef],
+    )
+    resolved = r.rows[0] ?? null
+  } else if ('rubricId' in rubricRef) {
+    const r = await pool.query(
+      `SELECT rubric_id, book_id, ext_id FROM rep_rubrics WHERE rubric_id=$1`,
+      [rubricRef.rubricId],
+    )
+    resolved = r.rows[0] ?? null
+  } else {
+    const r = await pool.query(
+      `SELECT rubric_id, book_id, ext_id FROM rep_rubrics
+        WHERE ext_id=$1 AND book_id=(SELECT id FROM rep_books WHERE code=$2)`,
+      [rubricRef.rubricExtId, rubricRef.bookCode],
+    )
+    resolved = r.rows[0] ?? null
+  }
+  if (!resolved) throw new Error('Rubric not found')
+
+  await pool.query(
+    `INSERT INTO case_rep_rubrics
+       (case_id, rubric_ext_id, rubric_id, book_id, weight, intensity, symptom_note, added_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (case_id, rubric_id)
+       DO UPDATE SET weight = EXCLUDED.weight,
+                     intensity = EXCLUDED.intensity,
+                     symptom_note = EXCLUDED.symptom_note`,
+    [caseId, resolved.ext_id, resolved.rubric_id, resolved.book_id, weight, intensity, note, addedBy],
+  )
   const list = await listCaseRubrics(caseId)
-  const hit = list.find(r => r.rubric_ext_id === rubricExtId)
+  const hit = list.find(r => r.rubric_id === resolved!.rubric_id)
   if (!hit) throw new Error('Rubric add failed')
   return hit
 }
 
 export async function updateCaseRubric(
   caseId: string,
-  rubricExtId: number,
+  rubricRef: { rubricId: number } | { rubricExtId: number; bookCode?: string },
   patch: { weight?: number; intensity?: 'high' | 'mid' | 'low'; sort_order?: number; symptom_note?: string }
 ): Promise<void> {
   const fields: string[] = []
-  const values: any[] = [caseId, rubricExtId]
-  let i = 3
+  const values: any[] = [caseId]
+  let i = 2
   if (patch.weight !== undefined)       { fields.push(`weight = $${i++}`); values.push(patch.weight) }
   if (patch.intensity !== undefined)    { fields.push(`intensity = $${i++}`); values.push(patch.intensity) }
   if (patch.sort_order !== undefined)   { fields.push(`sort_order = $${i++}`); values.push(patch.sort_order) }
   if (patch.symptom_note !== undefined) { fields.push(`symptom_note = $${i++}`); values.push(patch.symptom_note) }
   if (fields.length === 0) return
 
-  await pool.query(
-    `UPDATE case_rep_rubrics SET ${fields.join(', ')} WHERE case_id = $1 AND rubric_ext_id = $2`,
-    values
-  )
+  let where: string
+  if ('rubricId' in rubricRef) {
+    values.push(rubricRef.rubricId)
+    where = `case_id = $1 AND rubric_id = $${i}`
+  } else {
+    const code = rubricRef.bookCode ?? 'complete'
+    values.push(rubricRef.rubricExtId, code)
+    where = `case_id = $1 AND rubric_ext_id = $${i++}
+             AND book_id = (SELECT id FROM rep_books WHERE code = $${i})`
+  }
+  await pool.query(`UPDATE case_rep_rubrics SET ${fields.join(', ')} WHERE ${where}`, values)
 }
 
-export async function removeCaseRubric(caseId: string, rubricExtId: number): Promise<void> {
-  await pool.query(
-    'DELETE FROM case_rep_rubrics WHERE case_id = $1 AND rubric_ext_id = $2',
-    [caseId, rubricExtId]
-  )
+export async function removeCaseRubric(
+  caseId: string,
+  rubricRef: { rubricId: number } | { rubricExtId: number; bookCode?: string },
+): Promise<void> {
+  if ('rubricId' in rubricRef) {
+    await pool.query(
+      'DELETE FROM case_rep_rubrics WHERE case_id = $1 AND rubric_id = $2',
+      [caseId, rubricRef.rubricId],
+    )
+  } else {
+    const code = rubricRef.bookCode ?? 'complete'
+    await pool.query(
+      `DELETE FROM case_rep_rubrics
+        WHERE case_id = $1 AND rubric_ext_id = $2
+          AND book_id = (SELECT id FROM rep_books WHERE code = $3)`,
+      [caseId, rubricRef.rubricExtId, code],
+    )
+  }
 }
 
 export async function clearCaseRubrics(caseId: string): Promise<void> {
@@ -236,23 +303,28 @@ export async function runAnalysis(
   const rubrics = await listCaseRubrics(caseId)
   if (rubrics.length === 0) return []
 
-  const extIds = rubrics.map(r => r.rubric_ext_id)
-  const weightMap = new Map<number, number>(rubrics.map(r => [r.rubric_ext_id, r.weight]))
+  const rubricIds = rubrics.map(r => r.rubric_id)
+  // Map by surrogate rubric_id (uniquely identifies (book, ext) pair).
+  const weightMap = new Map<number, number>(rubrics.map(r => [r.rubric_id, r.weight]))
   const totalRubrics = rubrics.length
 
+  // Join rep_rubric_remedies through rep_rubrics so we resolve by rubric_id
+  // and stay correct even when the same ext_id exists in multiple books.
   const sql = `
-    SELECT rl.rubric_ext_id, rl.rem_code, rl.grade
-    FROM rep_remlist rl
-    WHERE rl.rubric_ext_id = ANY($1::int[])
+    SELECT r.rubric_id, rr.rem_code, rr.grade
+    FROM rep_rubrics r
+    JOIN rep_rubric_remedies rr
+      ON rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id
+    WHERE r.rubric_id = ANY($1::bigint[])
   `
-  const { rows } = await pool.query(sql, [extIds])
+  const { rows } = await pool.query(sql, [rubricIds])
 
   type Agg = { score: number; count: number; grades: Record<string, number> }
   const agg = new Map<number, Agg>()
 
   for (const row of rows) {
     const grade: number = row.grade
-    const w = weightMap.get(row.rubric_ext_id) ?? 1
+    const w = weightMap.get(Number(row.rubric_id)) ?? 1
     const contribution = method === 'weighted' ? w * grade : grade
 
     let a = agg.get(row.rem_code)
@@ -323,20 +395,23 @@ export async function getRemedyDetail(
   if (rubrics.length === 0) {
     return { ...remedy, contributions: [] }
   }
-  const extIds = rubrics.map(r => r.rubric_ext_id)
-  const weightMap = new Map(rubrics.map(r => [r.rubric_ext_id, r.weight]))
-  const rubricMap = new Map(rubrics.map(r => [r.rubric_ext_id, r]))
+  const rubricIds = rubrics.map(r => r.rubric_id)
+  const weightMap = new Map(rubrics.map(r => [r.rubric_id, r.weight]))
+  const rubricMap = new Map(rubrics.map(r => [r.rubric_id, r]))
 
   const sql = `
-    SELECT rl.rubric_ext_id, rl.grade
-    FROM rep_remlist rl
-    WHERE rl.rem_code = $1 AND rl.rubric_ext_id = ANY($2::int[])
+    SELECT r.rubric_id, r.ext_id AS rubric_ext_id, rr.grade
+    FROM rep_rubrics r
+    JOIN rep_rubric_remedies rr
+      ON rr.book_id = r.book_id AND rr.rubric_ext_id = r.ext_id
+    WHERE rr.rem_code = $1 AND r.rubric_id = ANY($2::bigint[])
   `
-  const { rows } = await pool.query(sql, [remCode, extIds])
+  const { rows } = await pool.query(sql, [remCode, rubricIds])
 
   const contributions = rows.map(row => {
-    const w = weightMap.get(row.rubric_ext_id) ?? 1
-    const r = rubricMap.get(row.rubric_ext_id)!
+    const rid = Number(row.rubric_id)
+    const w = weightMap.get(rid) ?? 1
+    const r = rubricMap.get(rid)!
     const contribution = method === 'weighted' ? w * row.grade : row.grade
     return {
       rubric_ext_id: row.rubric_ext_id,
