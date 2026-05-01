@@ -303,9 +303,11 @@ export async function runAnalysis(
   const rubrics = await listCaseRubrics(caseId)
   if (rubrics.length === 0) return []
 
-  const rubricIds = rubrics.map(r => r.rubric_id)
-  // Map by surrogate rubric_id (uniquely identifies (book, ext) pair).
-  const weightMap = new Map<number, number>(rubrics.map(r => [r.rubric_id, r.weight]))
+  // pg returns BIGINT as string — coerce to Number so map keys match the
+  // Number(...) we use on the DB-row side. Otherwise every lookup misses
+  // and weights silently fall back to 1.
+  const rubricIds = rubrics.map(r => Number(r.rubric_id))
+  const weightMap = new Map<number, number>(rubrics.map(r => [Number(r.rubric_id), r.weight]))
   const totalRubrics = rubrics.length
 
   // Join rep_rubric_remedies through rep_rubrics so we resolve by rubric_id
@@ -395,9 +397,11 @@ export async function getRemedyDetail(
   if (rubrics.length === 0) {
     return { ...remedy, contributions: [] }
   }
-  const rubricIds = rubrics.map(r => r.rubric_id)
-  const weightMap = new Map(rubrics.map(r => [r.rubric_id, r.weight]))
-  const rubricMap = new Map(rubrics.map(r => [r.rubric_id, r]))
+  // pg returns BIGINT as string — coerce both sides to Number so the map
+  // lookups don't silently miss and leave rubric_text undefined.
+  const rubricIds = rubrics.map(r => Number(r.rubric_id))
+  const weightMap = new Map<number, number>(rubrics.map(r => [Number(r.rubric_id), r.weight]))
+  const rubricMap = new Map<number, typeof rubrics[number]>(rubrics.map(r => [Number(r.rubric_id), r]))
 
   const sql = `
     SELECT r.rubric_id, r.ext_id AS rubric_ext_id, rr.grade
