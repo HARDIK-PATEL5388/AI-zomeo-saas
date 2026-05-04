@@ -7,27 +7,39 @@ import {
 } from 'lucide-react'
 
 const MAX_FILE_MB = 300
-
-const REQUIRED = [
-  'RemID.tab',
-  'REPolar.tab',
-  'Complete.tab',
-  'Pagerefs.tab',
-  'LibraryIndex.tab',
-  'PapaSub.tab',
-  'Remlist.tab',
-  'Xrefs.tab',
-] as const
+const DEFAULT_PARSER_ID = 'complete_tab'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 type Step = 0 | 1 | 2 | 3 | 4 // 0=Book, 1=Upload, 2=Validate, 3=Import, 4=Complete
+
+interface ParserInfo {
+  id: string
+  name: string
+  description: string
+  fileCount: number
+  requiredCount: number
+}
+interface ParserFileSpec {
+  name: string
+  required: boolean
+  minColumns?: number
+  description?: string
+}
+interface ParserSpec {
+  parser: { id: string; name: string; description: string }
+  files: string[]
+  optionalFiles: string[]
+  fileSpec: ParserFileSpec[]
+  importOrder: string[]
+}
 
 interface Book {
   id: number
   code: string
   name: string
   description?: string | null
+  parser_type?: string
   sort_order: number
   chapter_count: number
   rubric_count: number
@@ -86,12 +98,19 @@ export default function RepertoryUploadPage() {
   // Step 0 — book selection
   const [books, setBooks] = useState<Book[]>([])
   const [booksLoading, setBooksLoading] = useState(true)
+  const [parsers, setParsers] = useState<ParserInfo[]>([])
+  const [parsersLoading, setParsersLoading] = useState(true)
   const [bookMode, setBookMode] = useState<'existing' | 'new'>('existing')
   const [selectedBookCode, setSelectedBookCode] = useState<string>('')
   const [newBookCode, setNewBookCode] = useState<string>('')
   const [newBookName, setNewBookName] = useState<string>('')
+  const [newBookParser, setNewBookParser] = useState<string>(DEFAULT_PARSER_ID)
   const [bookSubmitting, setBookSubmitting] = useState(false)
   const [bookError, setBookError] = useState<string | null>(null)
+
+  // Parser-driven file contract for the selected book
+  const [parserSpec, setParserSpec] = useState<ParserSpec | null>(null)
+  const [parserSpecLoading, setParserSpecLoading] = useState(false)
 
   // Step 1 — files
   const [files, setFiles] = useState<File[]>([])
@@ -125,7 +144,10 @@ export default function RepertoryUploadPage() {
     return m
   }, [files])
 
-  const allRequiredPresent = REQUIRED.every(name => filesByName.has(name))
+  const requiredFiles = parserSpec?.files ?? []
+  const optionalFiles = parserSpec?.optionalFiles ?? []
+  const allRequiredPresent =
+    requiredFiles.length > 0 && requiredFiles.every(name => filesByName.has(name))
 
   const activeBook: Book | null = useMemo(() => {
     if (bookMode === 'existing') return books.find(b => b.code === selectedBookCode) ?? null
@@ -134,16 +156,20 @@ export default function RepertoryUploadPage() {
         id: -1,
         code: normalizeCode(newBookCode),
         name: newBookName,
+        parser_type: newBookParser,
         sort_order: 999,
         chapter_count: 0,
         rubric_count: 0,
       }
     }
     return null
-  }, [bookMode, books, selectedBookCode, newBookCode, newBookName])
+  }, [bookMode, books, selectedBookCode, newBookCode, newBookName, newBookParser])
 
   const targetBookCode = activeBook?.code ?? ''
   const targetBookName = activeBook?.name ?? ''
+  const targetParserId =
+    activeBook?.parser_type ||
+    (bookMode === 'new' ? newBookParser : DEFAULT_PARSER_ID)
 
   async function loadBooks() {
     setBooksLoading(true)
@@ -174,7 +200,36 @@ export default function RepertoryUploadPage() {
     }
   }
 
-  useEffect(() => { loadBooks(); loadHistory() }, [])
+  async function loadParsers() {
+    setParsersLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/repertory-upload/parsers`)
+      const data = await res.json()
+      if (res.ok) setParsers(data.data ?? [])
+    } catch {/* non-fatal — wizard still works with the default */}
+    finally {
+      setParsersLoading(false)
+    }
+  }
+
+  useEffect(() => { loadBooks(); loadHistory(); loadParsers() }, [])
+
+  // Re-fetch the parser file contract whenever the target parser id changes.
+  useEffect(() => {
+    if (!targetParserId) { setParserSpec(null); return }
+    let cancelled = false
+    setParserSpecLoading(true)
+    fetch(`${API_URL}/api/repertory-upload/required?parser=${encodeURIComponent(targetParserId)}`)
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (cancelled) return
+        if (!ok) { setParserSpec(null); setError(d?.error || 'Failed to load parser spec'); return }
+        setParserSpec(d as ParserSpec)
+      })
+      .catch(e => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setParserSpecLoading(false) })
+    return () => { cancelled = true }
+  }, [targetParserId])
 
   async function handleConfirmBook() {
     setBookError(null)
@@ -198,7 +253,7 @@ export default function RepertoryUploadPage() {
       const res = await fetch(`${API_URL}/api/repertory-upload/books`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, name: newBookName.trim() }),
+        body: JSON.stringify({ code, name: newBookName.trim(), parserType: newBookParser }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
@@ -208,6 +263,7 @@ export default function RepertoryUploadPage() {
       setBookMode('existing')
       setNewBookCode('')
       setNewBookName('')
+      setNewBookParser(DEFAULT_PARSER_ID)
       setStep(1)
     } catch (e: any) {
       setBookError(e.message)
@@ -221,19 +277,36 @@ export default function RepertoryUploadPage() {
     for (const f of files) fd.append('files', f, f.name)
     fd.append('bookCode', targetBookCode)
     if (targetBookName) fd.append('bookName', targetBookName)
+    if (targetParserId) fd.append('parserType', targetParserId)
     for (const [k, v] of Object.entries(extra)) fd.append(k, v)
     return fd
   }
 
+  // The parser tells us which extensions are acceptable. If we haven't loaded
+  // the spec yet, fall back to the broadest set that the backend accepts.
+  const allowedExtensions = useMemo(() => {
+    const exts = new Set<string>()
+    for (const name of [...requiredFiles, ...optionalFiles]) {
+      const dot = name.lastIndexOf('.')
+      if (dot >= 0) exts.add(name.slice(dot).toLowerCase())
+    }
+    if (exts.size === 0) { exts.add('.tab'); exts.add('.csv'); exts.add('.txt') }
+    return exts
+  }, [requiredFiles, optionalFiles])
+
   function onPickFiles(picked: FileList | null) {
     if (!picked) return
-    const onlyTab = Array.from(picked).filter(f => f.name.toLowerCase().endsWith('.tab'))
-    const oversized = onlyTab.filter(f => f.size > MAX_FILE_MB * 1024 * 1024)
+    const accepted = Array.from(picked).filter(f => {
+      const lower = f.name.toLowerCase()
+      const dot = lower.lastIndexOf('.')
+      return dot >= 0 && allowedExtensions.has(lower.slice(dot))
+    })
+    const oversized = accepted.filter(f => f.size > MAX_FILE_MB * 1024 * 1024)
     if (oversized.length > 0) {
       setError(`File(s) exceed ${MAX_FILE_MB} MB: ${oversized.map(f => f.name).join(', ')}`)
       return
     }
-    setFiles(onlyTab)
+    setFiles(accepted)
     setError(null)
     setPreview(null)
     setPreviewTotals(null)
@@ -417,21 +490,29 @@ export default function RepertoryUploadPage() {
                   No books yet. Switch to “Create new book”.
                 </p>
               ) : (
-                <select
-                  className="w-full border rounded px-3 py-2 text-sm"
-                  value={selectedBookCode}
-                  onChange={(e) => setSelectedBookCode(e.target.value)}
-                >
-                  {books.map(b => (
-                    <option key={b.code} value={b.code}>
-                      {b.name} ({b.code}) — {b.chapter_count} chapters · {b.rubric_count.toLocaleString()} rubrics
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    value={selectedBookCode}
+                    onChange={(e) => setSelectedBookCode(e.target.value)}
+                  >
+                    {books.map(b => (
+                      <option key={b.code} value={b.code}>
+                        {b.name} ({b.code}) — {b.chapter_count} chapters · {b.rubric_count.toLocaleString()} rubrics
+                      </option>
+                    ))}
+                  </select>
+                  {activeBook?.parser_type && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Parser: <code className="px-1 bg-gray-100 rounded">{activeBook.parser_type}</code>
+                      {parserSpec && <> · {parserSpec.parser.name}</>}
+                    </p>
+                  )}
+                </>
               )}
             </Field>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Field label="Book Code (required)">
                 <input
                   type="text"
@@ -457,6 +538,28 @@ export default function RepertoryUploadPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Display name shown in browser.</p>
               </Field>
+              <Field label="Parser type (required)">
+                {parsersLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading parsers…
+                  </div>
+                ) : (
+                  <select
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    value={newBookParser}
+                    onChange={(e) => setNewBookParser(e.target.value)}
+                  >
+                    {parsers.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.id}) — {p.requiredCount} required file{p.requiredCount === 1 ? '' : 's'}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Determines which files this book accepts.
+                </p>
+              </Field>
             </div>
           )}
 
@@ -477,10 +580,15 @@ export default function RepertoryUploadPage() {
 
       {/* STEP 1: Upload Files */}
       {step === 1 && (
-        <Card title="Step 2 — Upload TAB Files" icon={<Upload className="w-4 h-4" />}>
+        <Card title="Step 2 — Upload Files" icon={<Upload className="w-4 h-4" />}>
           <p className="text-sm text-gray-600 mb-3">
-            Importing into <b>{targetBookName}</b> <span className="text-gray-500">({targetBookCode})</span>.
-            Select all 8 required <code>.tab</code> files.
+            Importing into <b>{targetBookName}</b> <span className="text-gray-500">({targetBookCode})</span>{' '}
+            via <b>{parserSpec?.parser.name ?? targetParserId}</b>.
+            {parserSpec && (
+              <> Select all {requiredFiles.length} required file{requiredFiles.length === 1 ? '' : 's'}
+                {optionalFiles.length > 0 && <> (and up to {optionalFiles.length} optional)</>}.
+              </>
+            )}
           </p>
 
           <div
@@ -489,46 +597,97 @@ export default function RepertoryUploadPage() {
           >
             <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
             <p className="text-sm text-gray-600">Click to choose files (multi-select)</p>
-            <p className="text-xs text-gray-400 mt-1">.tab only</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Accepted: {Array.from(allowedExtensions).sort().join(', ')}
+            </p>
             <input
               ref={inputRef}
               type="file"
               multiple
-              accept=".tab"
+              accept={Array.from(allowedExtensions).sort().join(',')}
               hidden
               onChange={(e) => onPickFiles(e.target.files)}
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-            {REQUIRED.map((name) => {
-              const f = filesByName.get(name)
-              return (
-                <div key={name} className={`flex items-center justify-between border rounded px-3 py-2 ${f ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
-                  <div className="flex items-center gap-2 text-sm">
-                    {f
-                      ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      : <FileText className="w-4 h-4 text-gray-400" />}
-                    <span className="font-mono text-gray-800">{name}</span>
+          {parserSpecLoading ? (
+            <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading parser file list…
+            </div>
+          ) : (
+            <>
+              {requiredFiles.length > 0 && (
+                <>
+                  <p className="mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Required</p>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {requiredFiles.map((name) => {
+                      const f = filesByName.get(name)
+                      const spec = parserSpec?.fileSpec.find(s => s.name === name)
+                      return (
+                        <div key={name} className={`flex items-center justify-between border rounded px-3 py-2 ${f ? 'bg-green-50 border-green-200' : 'bg-gray-50'}`}>
+                          <div className="flex items-center gap-2 text-sm min-w-0">
+                            {f
+                              ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                              : <FileText className="w-4 h-4 text-gray-400 shrink-0" />}
+                            <div className="min-w-0">
+                              <div className="font-mono text-gray-800 truncate">{name}</div>
+                              {spec?.description && (
+                                <div className="text-[11px] text-gray-500 truncate">{spec.description}</div>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`text-xs shrink-0 ${f ? 'text-green-700' : 'text-gray-400'}`}>
+                            {f ? `${(f.size / 1024 / 1024).toFixed(2)} MB` : 'missing'}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
-                  <span className={`text-xs ${f ? 'text-green-700' : 'text-gray-400'}`}>
-                    {f ? `${(f.size / 1024 / 1024).toFixed(2)} MB` : 'missing'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+                </>
+              )}
+
+              {optionalFiles.length > 0 && (
+                <>
+                  <p className="mt-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Optional</p>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {optionalFiles.map((name) => {
+                      const f = filesByName.get(name)
+                      const spec = parserSpec?.fileSpec.find(s => s.name === name)
+                      return (
+                        <div key={name} className={`flex items-center justify-between border rounded px-3 py-2 ${f ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'}`}>
+                          <div className="flex items-center gap-2 text-sm min-w-0">
+                            {f
+                              ? <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                              : <FileText className="w-4 h-4 text-gray-300 shrink-0" />}
+                            <div className="min-w-0">
+                              <div className="font-mono text-gray-800 truncate">{name}</div>
+                              {spec?.description && (
+                                <div className="text-[11px] text-gray-500 truncate">{spec.description}</div>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs shrink-0 text-gray-400">
+                            {f ? `${(f.size / 1024 / 1024).toFixed(2)} MB` : 'optional'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           {!allRequiredPresent && files.length > 0 && (
             <div className="mt-3 text-xs text-amber-700">
-              Missing {REQUIRED.filter(n => !filesByName.has(n)).length} required file(s).
+              Missing {requiredFiles.filter(n => !filesByName.has(n)).length} required file(s).
             </div>
           )}
 
           <div className="mt-6 flex justify-between">
             <SecondaryButton onClick={() => setStep(0)}>Back</SecondaryButton>
             <PrimaryButton
-              disabled={!allRequiredPresent || validating}
+              disabled={!allRequiredPresent || validating || parserSpecLoading}
               onClick={handleValidate}
             >
               {validating ? (<><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Validating…</>) :
@@ -638,7 +797,7 @@ export default function RepertoryUploadPage() {
             </div>
           )}
 
-          <PerFileProgress logs={logs} />
+          <PerFileProgress files={parserSpec?.importOrder ?? requiredFiles} logs={logs} />
 
           <div className="mt-4 bg-black text-green-300 font-mono text-xs rounded p-3 max-h-48 overflow-y-auto">
             {logs.length === 0 && <div className="text-gray-500">Connecting to import job…</div>}
@@ -856,9 +1015,9 @@ function StatusBadge({ status }: { status: FileSummary['status'] | string }) {
   return <span className={`text-xs px-2 py-0.5 rounded font-medium ${styles[status] ?? 'bg-gray-100 text-gray-700'}`}>{status}</span>
 }
 
-function PerFileProgress({ logs }: { logs: { file: string; message: string }[] }) {
+function PerFileProgress({ files, logs }: { files: string[]; logs: { file: string; message: string }[] }) {
   const fileState = new Map<string, 'pending' | 'importing' | 'done' | 'unchanged' | 'failed'>()
-  for (const f of REQUIRED) fileState.set(f, 'pending')
+  for (const f of files) fileState.set(f, 'pending')
   for (const l of logs) {
     if (l.message.startsWith('Importing')) fileState.set(l.file, 'importing')
     else if (l.message.startsWith('Done')) fileState.set(l.file, 'done')
@@ -867,7 +1026,7 @@ function PerFileProgress({ logs }: { logs: { file: string; message: string }[] }
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-      {REQUIRED.map((file) => {
+      {files.map((file) => {
         const state = fileState.get(file)!
         return (
           <div key={file} className={`flex items-center justify-between border rounded px-3 py-2 text-sm ${
