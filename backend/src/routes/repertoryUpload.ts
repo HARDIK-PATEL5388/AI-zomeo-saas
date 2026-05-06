@@ -33,11 +33,12 @@ export const repertoryUploadRoutes = new Hono()
 // FIX B6 — limits to prevent resource exhaustion
 const MAX_FILE_BYTES  = 300 * 1024 * 1024  // 300 MB per file (Remlist is ~125 MB)
 const MAX_TOTAL_BYTES = 1024 * 1024 * 1024 // 1 GB total payload
-// basename only, .tab/.csv/.txt/.rtf extension, no path chars — broadened
-// from .tab-only so non-TAB parsers (Jeremy/QRep CSVs, Murphy RTFs) can be
-// uploaded too. Murphy filenames contain spaces (e.g. "1. abdomem.rtf"), so
-// the character class allows ` ` along with the original safe set.
-const VALID_NAME_RE   = /^[A-Za-z0-9_.\- ]+\.(tab|csv|txt|rtf)$/i
+// basename only, .tab/.csv/.txt/.rtf/.doc extension, no path chars — broadened
+// from .tab-only so non-TAB parsers (Jeremy/QRep CSVs, Murphy RTFs, Khullar
+// DOCs) can be uploaded too. Khullar shipped filenames have commas and parens
+// (e.g. "Weariness, Exhaustion.doc", "Hepatitis (Liver).doc") so the character
+// class allows `,` and `()` alongside spaces.
+const VALID_NAME_RE   = /^[A-Za-z0-9_.\- ,()]+\.(tab|csv|txt|rtf|doc)$/i
 
 // In-memory progress logs (cleared on server restart)
 const jobProgress = new Map<number, Array<{ file: string; message: string; time: string }>>()
