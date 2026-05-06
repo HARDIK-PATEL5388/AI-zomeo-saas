@@ -6,6 +6,7 @@
 import type { RepertoryParser } from './parser.types'
 import { completeTabParser } from './completeTab'
 import { jeremyQRepParser } from './jeremyQRep'
+import { murphyRtfParser } from './murphyRtf'
 
 const registry = new Map<string, RepertoryParser>()
 
@@ -33,3 +34,4 @@ export function listParsers(): RepertoryParser[] {
 // ─── Built-in parsers ──────────────────────────────────────────────────────
 registerParser(completeTabParser)
 registerParser(jeremyQRepParser)
+registerParser(murphyRtfParser)

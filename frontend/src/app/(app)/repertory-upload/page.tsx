@@ -290,7 +290,7 @@ export default function RepertoryUploadPage() {
       const dot = name.lastIndexOf('.')
       if (dot >= 0) exts.add(name.slice(dot).toLowerCase())
     }
-    if (exts.size === 0) { exts.add('.tab'); exts.add('.csv'); exts.add('.txt') }
+    if (exts.size === 0) { exts.add('.tab'); exts.add('.csv'); exts.add('.txt'); exts.add('.rtf') }
     return exts
   }, [requiredFiles, optionalFiles])
 

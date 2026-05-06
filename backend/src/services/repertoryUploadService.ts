@@ -90,15 +90,21 @@ async function ensureBook(
   client: PoolClient,
   code: string,
   name?: string,
+  parserId?: string,
 ): Promise<number> {
   const found = await client.query(
     `SELECT id FROM rep_books WHERE code = $1`,
     [code],
   )
   if ((found.rowCount ?? 0) > 0) return found.rows[0].id as number
+  // Pass parser_type at create-time. Without this, the column default
+  // ('complete_tab', migration 010) silently masks the orchestrator's
+  // resolved parser id, so a Murphy book ends up tagged complete_tab.
   const created = await client.query(
-    `INSERT INTO rep_books (code, name) VALUES ($1, $2) RETURNING id`,
-    [code, name ?? code.charAt(0).toUpperCase() + code.slice(1)],
+    `INSERT INTO rep_books (code, name, parser_type)
+       VALUES ($1, $2, COALESCE($3, 'complete_tab'))
+     RETURNING id`,
+    [code, name ?? code.charAt(0).toUpperCase() + code.slice(1), parserId ?? null],
   )
   return created.rows[0].id as number
 }
@@ -225,13 +231,20 @@ export async function runImport(
   {
     const setupClient = await localPool.connect()
     try {
-      bookId = await ensureBook(setupClient, bookCode, bookName)
-      // If the book row pre-existed without parser_type set, sync it now.
-      await setupClient.query(
-        `UPDATE rep_books SET parser_type = COALESCE(NULLIF(parser_type, ''), $1)
-          WHERE id = $2`,
-        [parserId, bookId],
-      )
+      bookId = await ensureBook(setupClient, bookCode, bookName, parserId)
+      // For pre-existing rows that were created before the parser_type column
+      // (or saved with the default), align the column to the explicit parser
+      // when the caller passed one in metadata. Don't overwrite an explicit
+      // mismatch — that's the user's choice — only fix up unset/default values.
+      if (meta.parserId) {
+        await setupClient.query(
+          `UPDATE rep_books
+              SET parser_type = $1
+            WHERE id = $2 AND (parser_type IS NULL OR parser_type = '' OR parser_type = 'complete_tab')
+              AND $1 <> 'complete_tab'`,
+          [parserId, bookId],
+        )
+      }
     } finally {
       setupClient.release()
     }
