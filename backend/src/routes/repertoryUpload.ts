@@ -27,8 +27,17 @@ import {
   type JobMetadata,
 } from '../services/repertoryUploadService'
 import { getParser } from '../services/parsers/parserRegistry'
+import { requireAdmin } from '../middleware/requireAdmin'
 
 export const repertoryUploadRoutes = new Hono()
+
+// Browse endpoints (`/browse/*`) power the doctor's read-only repertory page
+// and stay public. Everything else on this router — upload, validate, import,
+// jobs, books CRUD, data wipe — is admin-only.
+repertoryUploadRoutes.use('*', async (c, next) => {
+  if (c.req.path.includes('/browse/')) return next()
+  return requireAdmin(c, next)
+})
 
 // FIX B6 — limits to prevent resource exhaustion
 const MAX_FILE_BYTES  = 300 * 1024 * 1024  // 300 MB per file (Remlist is ~125 MB)

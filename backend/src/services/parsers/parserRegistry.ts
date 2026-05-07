@@ -8,6 +8,7 @@ import { completeTabParser } from './completeTab'
 import { jeremyQRepParser } from './jeremyQRep'
 import { murphyRtfParser } from './murphyRtf'
 import { khullarDocParser } from './khullarDoc'
+import { phatakTxtParser } from './phatakTxt'
 
 const registry = new Map<string, RepertoryParser>()
 
@@ -37,3 +38,4 @@ registerParser(completeTabParser)
 registerParser(jeremyQRepParser)
 registerParser(murphyRtfParser)
 registerParser(khullarDocParser)
+registerParser(phatakTxtParser)

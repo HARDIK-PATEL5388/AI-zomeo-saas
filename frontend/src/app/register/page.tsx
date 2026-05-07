@@ -23,7 +23,7 @@ export default function RegisterPage() {
 
     setIsLoading(true)
     try {
-      const res = await api.post<{ token?: string }>('/auth/register', {
+      const res = await api.post<{ token?: string; user?: { role?: string } }>('/auth/register', {
         clinic_name: form.clinic_name,
         first_name: form.first_name,
         last_name: form.last_name,
@@ -32,6 +32,7 @@ export default function RegisterPage() {
       })
       if (res.token) localStorage.setItem('zomeo_access_token', res.token)
       localStorage.setItem('user_email', form.email)
+      if (res.user?.role) localStorage.setItem('zomeo_user_role', res.user.role)
       router.push('/dashboard')
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed'

@@ -34,13 +34,14 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const res = await api.post<{ token: string; user: { email: string } }>(
+      const res = await api.post<{ token: string; user: { email: string; role?: string } }>(
         '/auth/login',
         { identifier: email, password }
       )
       if (!res.token) throw new Error('No token in response')
       localStorage.setItem('zomeo_access_token', res.token)
       localStorage.setItem('user_email', res.user?.email ?? email)
+      if (res.user?.role) localStorage.setItem('zomeo_user_role', res.user.role)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed'
       setError(message.includes('401') || /credentials/i.test(message)

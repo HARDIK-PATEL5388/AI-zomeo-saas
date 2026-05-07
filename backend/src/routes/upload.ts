@@ -6,8 +6,11 @@ import { createClient } from '@supabase/supabase-js'
 import { validateAllFiles, getRequiredFiles } from '../services/tabValidator'
 import { runImportPipeline, IMPORT_ORDER } from '../services/tabImporter'
 import { db } from '../db/client'
+import { requireAdmin } from '../middleware/requireAdmin'
 
 export const uploadRoutes = new Hono()
+
+uploadRoutes.use('*', requireAdmin)
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,

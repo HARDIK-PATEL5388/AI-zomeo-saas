@@ -5,16 +5,17 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, FolderOpen, BookOpen, BarChart2,
   Pill, Calendar, Settings, LogOut, Sparkles, BookMarked,
-  FileText, ShieldCheck, Upload,
+  FileText, ShieldCheck,
 } from 'lucide-react'
 import clsx from 'clsx'
 
+// Repertory upload was moved out of the doctor panel into /admin/repertory/upload.
+// Doctors never see the upload UI here; admins reach it via the Admin Portal link.
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/patients', label: 'Patients', icon: Users },
   { href: '/cases', label: 'Cases', icon: FolderOpen },
   { href: '/repertory', label: 'Repertory', icon: BookOpen },
-  { href: '/repertory-upload', label: 'Repertory Upload', icon: Upload },
   { href: '/analysis', label: 'Analysis', icon: BarChart2 },
   { href: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
   { href: '/prescriptions', label: 'Prescriptions', icon: Pill },
@@ -29,10 +30,12 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem('zomeo_access_token')
+    localStorage.removeItem('zomeo_user_role')
     window.location.href = '/login'
   }
 
-  const isAdmin = typeof window !== 'undefined' && !!localStorage.getItem('zomeo_is_admin')
+  const role = typeof window !== 'undefined' ? localStorage.getItem('zomeo_user_role') : null
+  const isAdmin = role === 'admin' || role === 'master_admin'
 
   return (
     <aside className="w-58 bg-white border-r flex flex-col h-full shrink-0" style={{ width: 232 }}>
