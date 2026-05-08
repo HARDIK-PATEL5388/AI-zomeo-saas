@@ -89,6 +89,34 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
   const [minScore, setMinScore] = useState<number>(0)
   const [opError, setOpError] = useState<string | null>(null)
 
+  // Generate-Prescription / Save Follow-up modal
+  const [showRxModal, setShowRxModal] = useState(false)
+  const todayStr = () => new Date().toISOString().slice(0, 10)
+  const [rxForm, setRxForm] = useState({
+    visit_date: todayStr(),
+    remedy_name: '',
+    remedy_code: null as number | null,
+    analysis_id: null as string | null,
+    potency: '',
+    dosage: '',
+    repetition: '',
+    days: '',
+    prescription_type: '',
+    remedy_response: '',
+    diagnosis: '',
+    preferences: '',
+    investigations: '',
+    examination: '',
+    next_visit_date: '',
+    notes: '',
+    complaints: '',
+    improvement_score: null as number | null,
+    action_taken: 'continue',
+  })
+  const [rxSaving, setRxSaving] = useState(false)
+  const [rxSaved, setRxSaved] = useState<{ id: string } | null>(null)
+  const [rxError, setRxError] = useState<string | null>(null)
+
   // Debounce the search input
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 250)
@@ -123,6 +151,25 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
     enabled: !!caseId && selectedRemCode != null,
   })
   const detail = remedyDetailResp?.data
+
+  // Case context — for prefilling the prescription modal with patient + complaint
+  interface CaseContext {
+    id: string
+    patient_id: string
+    chief_complaint: string
+    history?: string | null
+    patient_name: string
+    first_name?: string
+    last_name?: string
+    age?: number | null
+    gender?: string | null
+  }
+  const { data: caseResp } = useQuery({
+    queryKey: ['case', caseId],
+    queryFn: () => api.get<{ data: CaseContext }>(`/cases/${caseId}`),
+    enabled: !!caseId,
+  })
+  const caseInfo = caseResp?.data
 
   // ─── Mutations ──────────────────────────────────────────────────────
   const addRubric = useMutation({
@@ -166,10 +213,11 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
   })
 
   const saveCase = useMutation({
-    mutationFn: () => api.post(`/analysis/v2/cases/${caseId}/save`, {
+    mutationFn: () => api.post<{ data: { id: string } }>(`/analysis/v2/cases/${caseId}/save`, {
       method, results, rubric_count: selected.length,
     }),
   })
+  const lastAnalysisId = saveCase.data?.data?.id ?? null
 
   // ─── AI ─────────────────────────────────────────────────────────────
   const runAiSuggest = useCallback(async () => {
@@ -593,11 +641,32 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
           >
             <Save className="w-3.5 h-3.5" /> Save Case
           </button>
-          <a
-            href={`/prescriptions/new?caseId=${caseId}${selectedRemCode ? `&remCode=${selectedRemCode}` : ''}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-xs font-medium"
+          <button
+            type="button"
+            disabled={!hasRun || !selectedRemCode}
+            onClick={() => {
+              setRxError(null)
+              setRxSaved(null)
+              setRxForm(f => ({
+                ...f,
+                visit_date: todayStr(),
+                remedy_name: detail?.full_name ?? detail?.abbreviation ?? '',
+                remedy_code: selectedRemCode,
+                analysis_id: lastAnalysisId,
+                complaints: f.complaints || caseInfo?.chief_complaint || '',
+              }))
+              setShowRxModal(true)
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-xs font-medium disabled:opacity-50"
           >
             <Pill className="w-3.5 h-3.5" /> Generate Prescription
+          </button>
+          <a
+            href="/followups"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-slate-700 hover:bg-slate-50 text-xs"
+            title="Open the Follow-ups list"
+          >
+            <FileText className="w-3.5 h-3.5" /> View Follow-ups
           </a>
           <button
             onClick={handleExportPdf}
@@ -615,6 +684,241 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
           </button>
         </div>
       </div>
+
+      {/* ─── Generate Prescription / Save Follow-up modal ─────────────── */}
+      {showRxModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between px-5 py-3 border-b">
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-slate-900">Generate Prescription</h2>
+                <p className="text-[11px] text-slate-500">
+                  Saves a follow-up record linked to this case.
+                </p>
+              </div>
+              <button onClick={() => setShowRxModal(false)} className="p-1 hover:bg-slate-100 rounded">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Patient + case context (read-only) */}
+            <div className="px-5 py-2.5 bg-slate-50 border-b grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">Patient</div>
+                <div className="font-medium text-slate-800 truncate">{caseInfo?.patient_name ?? '—'}</div>
+                {caseInfo?.age != null && (
+                  <div className="text-[11px] text-slate-500">{caseInfo.age} yrs · {caseInfo.gender ?? '—'}</div>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">Chief Complaint</div>
+                <div className="text-slate-800 truncate" title={caseInfo?.chief_complaint ?? ''}>
+                  {caseInfo?.chief_complaint ?? '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">Selected Remedy</div>
+                <div className="font-medium text-slate-800">
+                  {rxForm.remedy_name || '—'}
+                  {rxForm.remedy_code != null && (
+                    <span className="text-[11px] text-slate-500 ml-1">#{rxForm.remedy_code}</span>
+                  )}
+                </div>
+              </div>
+              <div className="sm:col-span-2">
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">Analysis</div>
+                <div className="text-slate-700 text-[11px]">
+                  {rxForm.analysis_id ? (
+                    <span className="font-mono">{rxForm.analysis_id.slice(0, 8)}…</span>
+                  ) : (
+                    <span className="text-slate-400">Not saved (optional). Click "Save Case" first to link.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 grid grid-cols-2 gap-3 text-sm">
+              <RxField label="Visit Date">
+                <input type="date" value={rxForm.visit_date}
+                  onChange={(e) => setRxForm(f => ({ ...f, visit_date: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Next Visit Date">
+                <input type="date" value={rxForm.next_visit_date}
+                  onChange={(e) => setRxForm(f => ({ ...f, next_visit_date: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Remedy">
+                <input type="text" value={rxForm.remedy_name}
+                  onChange={(e) => setRxForm(f => ({ ...f, remedy_name: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Potency">
+                <input type="text" value={rxForm.potency} placeholder="e.g. 200C, 1M, 30C"
+                  onChange={(e) => setRxForm(f => ({ ...f, potency: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Dosage">
+                <input type="text" value={rxForm.dosage} placeholder="e.g. 3 pills"
+                  onChange={(e) => setRxForm(f => ({ ...f, dosage: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Repetition">
+                <input type="text" value={rxForm.repetition} placeholder="e.g. Once at bedtime"
+                  onChange={(e) => setRxForm(f => ({ ...f, repetition: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Days">
+                <input type="text" value={rxForm.days} placeholder="e.g. 7"
+                  onChange={(e) => setRxForm(f => ({ ...f, days: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Prescription Type">
+                <select value={rxForm.prescription_type}
+                  onChange={(e) => setRxForm(f => ({ ...f, prescription_type: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5 bg-white">
+                  <option value="">—</option>
+                  <option value="acute">Acute</option>
+                  <option value="chronic">Chronic</option>
+                  <option value="constitutional">Constitutional</option>
+                  <option value="intercurrent">Intercurrent</option>
+                  <option value="placebo">Placebo</option>
+                </select>
+              </RxField>
+              <RxField label="Improvement (0-10)">
+                <input type="number" min={0} max={10}
+                  value={rxForm.improvement_score ?? ''}
+                  onChange={(e) => setRxForm(f => ({ ...f, improvement_score: e.target.value === '' ? null : Number(e.target.value) }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Action Taken">
+                <select value={rxForm.action_taken}
+                  onChange={(e) => setRxForm(f => ({ ...f, action_taken: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5 bg-white">
+                  <option value="continue">Continue same remedy</option>
+                  <option value="change_potency">Change potency</option>
+                  <option value="wait">Wait and watch</option>
+                  <option value="repeat">Repeat medicine</option>
+                  <option value="change_remedy">Change remedy</option>
+                  <option value="intercurrent">Intercurrent</option>
+                </select>
+              </RxField>
+              <RxField label="Complaints" wide>
+                <textarea rows={2} value={rxForm.complaints}
+                  onChange={(e) => setRxForm(f => ({ ...f, complaints: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Remedy Response" wide>
+                <textarea rows={2} value={rxForm.remedy_response}
+                  onChange={(e) => setRxForm(f => ({ ...f, remedy_response: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Diagnosis" wide>
+                <textarea rows={2} value={rxForm.diagnosis}
+                  onChange={(e) => setRxForm(f => ({ ...f, diagnosis: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Preferences" wide>
+                <textarea rows={2} value={rxForm.preferences}
+                  onChange={(e) => setRxForm(f => ({ ...f, preferences: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Investigations" wide>
+                <textarea rows={2} value={rxForm.investigations}
+                  onChange={(e) => setRxForm(f => ({ ...f, investigations: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Examination" wide>
+                <textarea rows={2} value={rxForm.examination}
+                  onChange={(e) => setRxForm(f => ({ ...f, examination: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+              <RxField label="Notes" wide>
+                <textarea rows={2} value={rxForm.notes}
+                  onChange={(e) => setRxForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full border rounded px-2 py-1.5" />
+              </RxField>
+
+              {rxError && (
+                <div className="col-span-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                  {rxError}
+                </div>
+              )}
+              {rxSaved && (
+                <div className="col-span-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+                  <span>✓ Follow-up saved successfully.</span>
+                  <span className="flex items-center gap-2">
+                    <a href={`/followups/${rxSaved.id}`} className="underline font-medium">
+                      Open follow-up →
+                    </a>
+                    <a href="/followups" className="underline">All follow-ups</a>
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t bg-slate-50">
+              <button onClick={() => setShowRxModal(false)} className="px-3 py-1.5 border rounded-md text-sm hover:bg-slate-100">
+                {rxSaved ? 'Close' : 'Cancel'}
+              </button>
+              <button
+                disabled={rxSaving || !caseId || !!rxSaved}
+                onClick={async () => {
+                  if (!caseId) return
+                  setRxSaving(true)
+                  setRxError(null)
+                  try {
+                    const payload: Record<string, unknown> = {
+                      case_id: caseId,
+                      analysis_id: rxForm.analysis_id ?? undefined,
+                      visit_date: rxForm.visit_date || undefined,
+                      remedy_name: rxForm.remedy_name || undefined,
+                      remedy_code: rxForm.remedy_code ?? undefined,
+                      potency: rxForm.potency || undefined,
+                      dosage: rxForm.dosage || undefined,
+                      repetition: rxForm.repetition || undefined,
+                      days: rxForm.days || undefined,
+                      prescription_type: rxForm.prescription_type || undefined,
+                      remedy_response: rxForm.remedy_response || undefined,
+                      diagnosis: rxForm.diagnosis || undefined,
+                      preferences: rxForm.preferences || undefined,
+                      investigations: rxForm.investigations || undefined,
+                      examination: rxForm.examination || undefined,
+                      complaints: rxForm.complaints || undefined,
+                      improvement_score: rxForm.improvement_score ?? undefined,
+                      next_visit_date: rxForm.next_visit_date || undefined,
+                      notes: rxForm.notes || undefined,
+                      action_taken: rxForm.action_taken || undefined,
+                    }
+                    const res = await api.post<{ data: { id: string } }>('/followups', payload)
+                    setRxSaved({ id: res.data.id })
+                    // Refresh any cached follow-up lists across the app
+                    queryClient.invalidateQueries({ queryKey: ['followups'] })
+                    if (caseInfo?.patient_id) {
+                      queryClient.invalidateQueries({ queryKey: ['patient-followups', caseInfo.patient_id] })
+                    }
+                  } catch (err) {
+                    setRxError(err instanceof Error ? err.message : 'Save failed')
+                  } finally {
+                    setRxSaving(false)
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" /> {rxSaving ? 'Saving…' : rxSaved ? 'Saved' : 'Save Follow-up'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RxField({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={wide ? 'col-span-2' : ''}>
+      <label className="block text-[11px] font-medium text-slate-600 mb-1">{label}</label>
+      {children}
     </div>
   )
 }

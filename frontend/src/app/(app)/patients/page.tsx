@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Users, Plus, Search, X, Upload, Printer, FileDown, User as UserIcon } from 'lucide-react'
+import { Users, Plus, Search, X, Upload, Printer, FileDown, User as UserIcon, Calendar } from 'lucide-react'
 import { mockPatients } from '@/lib/mockData'
 import { api } from '@/lib/api'
 
@@ -66,7 +66,7 @@ const DIETS = ['Vegetarian', 'Non-Vegetarian', 'Vegan', 'Eggetarian']
 const PROGNOSES = ['Good', 'Fair', 'Guarded', 'Poor']
 const COUNTRIES = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'UAE', 'Singapore', 'Other']
 
-const TABS = ['Registration Information', 'Preliminary Information', 'Contact Details', 'Patient Card'] as const
+const TABS = ['Registration Information', 'Preliminary Information', 'Contact Details', 'Patient Card', 'Follow-up History'] as const
 type Tab = typeof TABS[number]
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -118,6 +118,17 @@ export default function PatientsPage() {
   const [loading, setLoading] = useState(true)
   const [usingMock, setUsingMock] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  // Patient follow-up history (Tab 5)
+  type PatientFollowup = {
+    id: string; visit_date?: string | null; followup_date?: string | null
+    remedy_name?: string | null; potency?: string | null; repetition?: string | null
+    improvement_score?: number | null; overall_improvement?: number | null
+    action_taken?: string | null; next_visit_date?: string | null; next_followup_date?: string | null
+    case_chief_complaint?: string | null; complaints?: string | null
+  }
+  const [patientFollowups, setPatientFollowups] = useState<PatientFollowup[]>([])
+  const [followupsLoading, setFollowupsLoading] = useState(false)
 
   // Patient Card preview options
   const [cardOpts, setCardOpts] = useState({
@@ -227,6 +238,7 @@ export default function PatientsPage() {
     setEditingId(id)
     setTab('Registration Information')
     setShowModal(true)
+    setPatientFollowups([])
     try {
       const res = await api.get<{ data: any }>(`/patients/${id}`)
       setForm(normalizePatient(res.data))
@@ -234,6 +246,16 @@ export default function PatientsPage() {
       // fall back to whatever we already have in the list (e.g. offline mock)
       const local = patients.find(p => p.id === id)
       if (local) setForm(normalizePatient(local))
+    }
+    // Lazy-load follow-up history in parallel — non-fatal if it fails
+    setFollowupsLoading(true)
+    try {
+      const fu = await api.get<{ data: PatientFollowup[] }>(`/patients/${id}/followups`)
+      setPatientFollowups(fu.data ?? [])
+    } catch {
+      setPatientFollowups([])
+    } finally {
+      setFollowupsLoading(false)
     }
   }
 
@@ -754,6 +776,73 @@ export default function PatientsPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* ---------- TAB 5 : Follow-up History ---------- */}
+                {tab === 'Follow-up History' && (
+                  <div>
+                    {!editingId ? (
+                      <p className="text-sm text-gray-500">
+                        Save the patient first — follow-up history will appear here once recorded.
+                      </p>
+                    ) : followupsLoading ? (
+                      <p className="text-sm text-gray-500">Loading history…</p>
+                    ) : patientFollowups.length === 0 ? (
+                      <div className="text-center py-10 text-sm text-gray-500">
+                        <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        No previous follow-ups for this patient yet.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50 border-b">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Date</th>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Complaint</th>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Remedy</th>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Potency</th>
+                              <th className="px-3 py-2 text-center text-gray-500 uppercase tracking-wide">Improv.</th>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Action</th>
+                              <th className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide">Next Visit</th>
+                              <th className="px-3 py-2 text-right text-gray-500 uppercase tracking-wide">·</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {patientFollowups.map(fu => {
+                              const v = fu.visit_date ?? fu.followup_date
+                              const next = fu.next_visit_date ?? fu.next_followup_date
+                              const im = fu.improvement_score ?? fu.overall_improvement
+                              const cmp = fu.complaints ?? fu.case_chief_complaint
+                              const fmt = (d?: string | null) => {
+                                if (!d) return '—'
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+                                  const [y, m, dd] = d.split('-'); return `${dd}/${m}/${y}`
+                                }
+                                const parsed = new Date(d); return isNaN(parsed.getTime()) ? d : parsed.toLocaleDateString()
+                              }
+                              return (
+                                <tr key={fu.id} className="hover:bg-gray-50">
+                                  <td className="px-3 py-2 whitespace-nowrap">{fmt(v)}</td>
+                                  <td className="px-3 py-2 max-w-[180px] truncate" title={cmp ?? ''}>{cmp || '—'}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap">{fu.remedy_name || '—'}</td>
+                                  <td className="px-3 py-2 font-mono text-emerald-700 whitespace-nowrap">{fu.potency || '—'}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    {im != null ? `${im}/10` : '—'}
+                                  </td>
+                                  <td className="px-3 py-2 capitalize whitespace-nowrap">{fu.action_taken?.replace(/_/g, ' ') || '—'}</td>
+                                  <td className="px-3 py-2 whitespace-nowrap text-gray-500">{fmt(next)}</td>
+                                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                                    <a href={`/followups/${fu.id}`}
+                                      className="text-emerald-700 hover:underline">View</a>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 

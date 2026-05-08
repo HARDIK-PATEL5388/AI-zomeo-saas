@@ -262,6 +262,37 @@ app.patch('/:id', zValidator('json', patientSchema.partial()), async (c) => {
 })
 
 // ----------------------------------------------------------------------------
+// FOLLOW-UPS for this patient
+// ----------------------------------------------------------------------------
+app.get('/:id/followups', async (c) => {
+  const { id } = c.req.param()
+  const user = c.get('user')
+
+  const rows = await db
+    .selectFrom('followups as fu')
+    .innerJoin('cases as ca', 'ca.id', 'fu.case_id')
+    .select([
+      'fu.id', 'fu.case_id', 'fu.patient_id',
+      'fu.analysis_id', 'fu.prescription_id',
+      'fu.visit_date', 'fu.complaints', 'fu.remedy_name', 'fu.remedy_code',
+      'fu.potency', 'fu.dosage', 'fu.repetition', 'fu.days',
+      'fu.prescription_type', 'fu.remedy_response',
+      'fu.diagnosis', 'fu.preferences', 'fu.investigations', 'fu.examination',
+      'fu.improvement_score', 'fu.next_visit_date', 'fu.notes',
+      'fu.followup_date', 'fu.overall_improvement', 'fu.action_taken',
+      'fu.next_followup_date', 'fu.created_at', 'fu.updated_at',
+      'ca.chief_complaint as case_chief_complaint',
+    ] as any)
+    .where('fu.clinic_id', '=', user.clinicId)
+    .where('fu.patient_id', '=', id)
+    .orderBy('fu.visit_date', 'desc')
+    .orderBy('fu.created_at', 'desc')
+    .execute()
+
+  return c.json({ data: rows })
+})
+
+// ----------------------------------------------------------------------------
 // DELETE (soft)
 // ----------------------------------------------------------------------------
 app.delete('/:id', async (c) => {

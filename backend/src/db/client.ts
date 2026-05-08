@@ -9,10 +9,10 @@ import { Pool, types as pgTypes } from 'pg'
 pgTypes.setTypeParser(1082, (v: string) => v)
 // NUMERIC (oid 1700) → number for client-friendly arithmetic
 pgTypes.setTypeParser(1700, (v: string) => (v == null ? null : Number(v)))
-import type { 
-  User, Clinic, Patient, Case, CaseRubric, 
-  RepertorySource, Chapter, Rubric, Remedy, 
-  RubricRemedy, AnalysisResult, Prescription, Followup 
+import type {
+  User, Clinic, Patient, Case, CaseRubric,
+  RepertorySource, Chapter, Rubric, Remedy,
+  RubricRemedy, AnalysisResult, Prescription, Followup, FollowupMedia
 } from '../types'
 
 export interface Database {
@@ -51,7 +51,8 @@ export interface Database {
     analyzed_at: Generated<string>
   }
   prescriptions: Omit<Prescription, 'id'> & { id: Generated<string>; clinic_id: string; patient_id: string; doctor_id: string; created_at: Generated<string>; updated_at: Generated<string> }
-  followups: Omit<Followup, 'id'> & { id: Generated<string>; clinic_id: string; patient_id: string; doctor_id: string; created_at: Generated<string> }
+  followups: Omit<Followup, 'id'> & { id: Generated<string>; clinic_id: string; patient_id: string; doctor_id: string; created_at: Generated<string>; updated_at: Generated<string> }
+  followup_media: Omit<FollowupMedia, 'id'> & { id: Generated<string>; created_at: Generated<string> }
   ai_search_logs: { id: Generated<string>; user_id: string; clinic_id: string; query: string; suggested_rubrics: any; response_time_ms: number; created_at: Generated<string> }
 }
 

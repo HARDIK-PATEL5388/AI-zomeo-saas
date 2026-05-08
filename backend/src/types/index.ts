@@ -209,12 +209,52 @@ export interface Prescription {
 export interface Followup {
   id: string
   case_id: string
-  followup_date: string
-  overall_improvement: number
-  symptom_changes?: string
-  doctor_notes?: string
-  action_taken: string
-  next_followup_date?: string
+  patient_id: string
+  clinic_id: string
+  doctor_id: string
+  prescription_id?: string | null
+  analysis_id?: string | null
+  // New fields (post-migration 011)
+  visit_date?: string | null
+  complaints?: string | null
+  remedy_name?: string | null
+  remedy_code?: number | null
+  potency?: string | null
+  dosage?: string | null
+  repetition?: string | null
+  days?: string | null
+  prescription_type?: string | null
+  remedy_response?: string | null
+  diagnosis?: string | null
+  preferences?: string | null
+  investigations?: string | null
+  examination?: string | null
+  improvement_score?: number | null
+  next_visit_date?: string | null
+  notes?: string | null
+  created_by?: string | null
+  // Legacy columns (kept for back-compat)
+  followup_date?: string | null
+  overall_improvement?: number | null
+  symptom_changes?: string | null
+  new_symptoms?: string | null
+  mental_state?: string | null
+  physical_state?: string | null
+  doctor_notes?: string | null
+  action_taken?: string | null
+  next_followup_date?: string | null
+  created_at?: string
+  updated_at?: string | null
+}
+
+export interface FollowupMedia {
+  id: string
+  followup_id: string
+  file_url: string
+  file_type?: string | null
+  caption?: string | null
+  uploaded_by?: string | null
+  created_at?: string
 }
 
 // API Response types
