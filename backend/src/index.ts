@@ -24,6 +24,7 @@ import { appointmentsRoutes } from './routes/appointments'
 import { booksRoutes } from './routes/books'
 import { reportsRoutes } from './routes/reports'
 import { notifyRoutes } from './routes/notify'
+import { dashboardRoutes } from './routes/dashboard'
 import { authMiddleware } from './middleware/auth'
 import { tenantMiddleware } from './middleware/tenant'
 import { rateLimiter } from './middleware/rateLimiter'
@@ -65,6 +66,7 @@ app.route('/api/reports', reportsRoutes)
 app.route('/api/ai', aiRoutes)
 app.route('/api/billing', billingRoutes)
 app.route('/api/notify', notifyRoutes)
+app.route('/api/dashboard', dashboardRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/upload', uploadRoutes)
 
