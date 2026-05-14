@@ -152,6 +152,64 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
             </tbody>
           </table>
         </section>
+
+        {(data.diagnosis || data.complaints) && (
+          <section className="rx-grid-2">
+            {data.diagnosis && (
+              <div>
+                <h3 className="rx-section-label">Diagnosis</h3>
+                <p className="rx-field-value">{data.diagnosis}</p>
+              </div>
+            )}
+            {data.complaints && (
+              <div>
+                <h3 className="rx-section-label">Complaints</h3>
+                <p className="rx-field-value">{data.complaints}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {(data.examination || data.investigations || data.remedy_response) && (
+          <section className="rx-grid-3">
+            {data.examination && (
+              <div>
+                <h3 className="rx-section-label">Examination</h3>
+                <p className="rx-field-value">{data.examination}</p>
+              </div>
+            )}
+            {data.investigations && (
+              <div>
+                <h3 className="rx-section-label">Investigations</h3>
+                <p className="rx-field-value">{data.investigations}</p>
+              </div>
+            )}
+            {data.remedy_response && (
+              <div>
+                <h3 className="rx-section-label">Remedy Response</h3>
+                <p className="rx-field-value">{data.remedy_response}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {data.notes && (
+          <section className="rx-block">
+            <h3 className="rx-section-label">Notes</h3>
+            <p className="rx-field-value">{data.notes}</p>
+          </section>
+        )}
+
+        <footer className="rx-footer">
+          <div className="rx-footer-left">
+            <p className="rx-meta">Generated: {generatedAt}</p>
+          </div>
+          <div className="rx-footer-right">
+            <div className="rx-sig-line" />
+            <p className="rx-doctor-name">{data.doctor_name?.trim() || 'Doctor'}</p>
+            <p className="rx-meta">Signature</p>
+          </div>
+        </footer>
       </div>
 
       <style jsx global>{`
@@ -315,6 +373,45 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
           font-size: 11px;
           color: #64748b;
           margin-left: 4px;
+        }
+        .rx-grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+          margin-top: 12px;
+        }
+        .rx-grid-3 {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 14px;
+          margin-top: 12px;
+        }
+        .rx-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-top: 28px;
+          padding-top: 12px;
+          border-top: 1px solid #e2e8f0;
+        }
+        .rx-footer-left {
+          flex: 1;
+        }
+        .rx-footer-right {
+          text-align: right;
+          min-width: 200px;
+        }
+        .rx-sig-line {
+          width: 200px;
+          border-bottom: 1px solid #0f172a;
+          margin: 0 0 4px auto;
+          height: 24px;
+        }
+        .rx-doctor-name {
+          margin: 0;
+          font-size: 12px;
+          font-weight: 700;
+          color: #0f172a;
         }
       `}</style>
     </div>
