@@ -4,9 +4,10 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, Plus, Trash2, Sparkles, Play, X, Save, FileText,
-  RotateCcw, FilePlus2, ChevronRight, Pill, BookOpen,
+  RotateCcw, FilePlus2, ChevronRight, Pill, BookOpen, Printer,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { PrescriptionPrint, printPrescription, type PrintablePrescription } from '@/components/prescription/PrescriptionPrint'
 
 type Method = 'kent' | 'weighted'
 type Intensity = 'high' | 'mid' | 'low'
@@ -116,6 +117,9 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
   const [rxSaving, setRxSaving] = useState(false)
   const [rxSaved, setRxSaved] = useState<{ id: string } | null>(null)
   const [rxError, setRxError] = useState<string | null>(null)
+  const [printData, setPrintData] = useState<PrintablePrescription | null>(null)
+  const [printLoading, setPrintLoading] = useState(false)
+  const [printError, setPrintError] = useState<string | null>(null)
 
   // Debounce the search input
   useEffect(() => {
@@ -266,6 +270,65 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
         setCustomText(''); setCustomOpen(false)
       })
   }
+
+  // Re-fetches the saved follow-up (enriched with patient + doctor names)
+  // and triggers the browser print dialog.
+  const handlePrintPrescription = async () => {
+    if (!rxSaved?.id) return
+    setPrintError(null)
+    setPrintLoading(true)
+    try {
+      const res = await api.get<{ data: any }>(`/followups/${rxSaved.id}`)
+      const r = res.data
+      const doctorName = [r.doctor_first_name, r.doctor_last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      const mapped: PrintablePrescription = {
+        patient_name: r.patient_name || `${r.patient_first_name ?? ''} ${r.patient_last_name ?? ''}`.trim(),
+        patient_age: r.patient_age ?? null,
+        patient_gender: r.patient_gender ?? null,
+        doctor_name: doctorName ? `Dr. ${doctorName}` : 'Doctor',
+        visit_date: r.visit_date ?? r.followup_date ?? null,
+        next_visit_date: r.next_visit_date ?? r.next_followup_date ?? null,
+        chief_complaint: r.case_chief_complaint ?? null,
+        diagnosis: r.diagnosis ?? null,
+        complaints: r.complaints ?? null,
+        remedy_name: r.remedy_name ?? null,
+        remedy_code: r.remedy_code ?? null,
+        potency: r.potency ?? null,
+        dosage: r.dosage ?? null,
+        repetition: r.repetition ?? null,
+        days: r.days ?? null,
+        prescription_type: r.prescription_type ?? null,
+        action_taken: r.action_taken ?? null,
+        remedy_response: r.remedy_response ?? null,
+        investigations: r.investigations ?? null,
+        examination: r.examination ?? null,
+        notes: r.notes ?? r.doctor_notes ?? null,
+        generated_at: new Date(),
+      }
+      setPrintData(mapped)
+    } catch (err) {
+      setPrintError(err instanceof Error ? err.message : 'Failed to load prescription')
+    } finally {
+      setPrintLoading(false)
+    }
+  }
+
+  // When printData becomes available, open the OS print dialog on the next paint.
+  useEffect(() => {
+    if (!printData) return
+    const id = requestAnimationFrame(() => printPrescription())
+    return () => cancelAnimationFrame(id)
+  }, [printData])
+
+  // Free the print container after the user closes the print dialog.
+  useEffect(() => {
+    const onAfter = () => setPrintData(null)
+    window.addEventListener('afterprint', onAfter)
+    return () => window.removeEventListener('afterprint', onAfter)
+  }, [])
 
   const handleExportPdf = () => {
     const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/analysis/v2/cases/${caseId}/export-pdf?method=${method}`
@@ -845,14 +908,26 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
                 </div>
               )}
               {rxSaved && (
-                <div className="col-span-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+                <div className="col-span-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
                   <span>✓ Follow-up saved successfully.</span>
                   <span className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePrintPrescription}
+                      disabled={printLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-xs font-medium disabled:opacity-50"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      {printLoading ? 'Preparing…' : 'Print Prescription'}
+                    </button>
                     <a href={`/followups/${rxSaved.id}`} className="underline font-medium">
                       Open follow-up →
                     </a>
                     <a href="/followups" className="underline">All follow-ups</a>
                   </span>
+                  {printError && (
+                    <span className="basis-full text-xs text-red-600">{printError}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -910,6 +985,8 @@ export default function AnalysisPage({ searchParams }: { searchParams: { caseId?
           </div>
         </div>
       )}
+
+      {printData && <PrescriptionPrint data={printData} />}
     </div>
   )
 }
