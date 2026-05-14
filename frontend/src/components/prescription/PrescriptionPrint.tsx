@@ -51,6 +51,10 @@ function formatDateTime(d?: Date): string {
   })
 }
 
+function titleCase(s: string): string {
+  return s.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+}
+
 export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
   const clinic = data.clinic_name?.trim() || 'Zomeo.ai'
   const generatedAt = useMemo(() => formatDateTime(data.generated_at), [data.generated_at])
@@ -102,6 +106,52 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
             <p className="rx-field-value">{data.chief_complaint}</p>
           </section>
         )}
+
+        <section className="rx-script">
+          <div className="rx-script-header">
+            <span className="rx-glyph">℞</span>
+            <h3 className="rx-script-title">Prescription</h3>
+          </div>
+          <table className="rx-script-table">
+            <tbody>
+              {data.remedy_name && (
+                <tr>
+                  <th>Remedy</th>
+                  <td>
+                    <strong>{data.remedy_name}</strong>
+                    {data.remedy_code != null && (
+                      <span className="rx-code"> #{data.remedy_code}</span>
+                    )}
+                  </td>
+                </tr>
+              )}
+              {(data.potency || data.dosage) && (
+                <tr>
+                  <th>Potency</th>
+                  <td>{data.potency || '—'}</td>
+                  <th>Dosage</th>
+                  <td>{data.dosage || '—'}</td>
+                </tr>
+              )}
+              {(data.repetition || data.days) && (
+                <tr>
+                  <th>Repetition</th>
+                  <td>{data.repetition || '—'}</td>
+                  <th>Days</th>
+                  <td>{data.days || '—'}</td>
+                </tr>
+              )}
+              {(data.prescription_type || data.action_taken) && (
+                <tr>
+                  <th>Type</th>
+                  <td>{data.prescription_type ? titleCase(data.prescription_type) : '—'}</td>
+                  <th>Action</th>
+                  <td>{data.action_taken ? titleCase(data.action_taken.replace(/_/g, ' ')) : '—'}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
       </div>
 
       <style jsx global>{`
@@ -205,6 +255,66 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
           padding: 10px 0;
           border-top: 1px solid #e2e8f0;
           margin-bottom: 4px;
+        }
+        .rx-script {
+          margin-top: 10px;
+          padding: 12px 14px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 6px;
+        }
+        .rx-script-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+          padding-bottom: 6px;
+          border-bottom: 1px dashed #86efac;
+        }
+        .rx-glyph {
+          font-family: 'Georgia', serif;
+          font-size: 22px;
+          font-weight: 700;
+          color: #059669;
+          line-height: 1;
+        }
+        .rx-script-title {
+          margin: 0;
+          font-family: 'Helvetica', sans-serif;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #047857;
+        }
+        .rx-script-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+        .rx-script-table th {
+          text-align: left;
+          font-family: 'Helvetica', sans-serif;
+          font-size: 9.5px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #64748b;
+          padding: 4px 10px 4px 0;
+          width: 80px;
+          vertical-align: top;
+        }
+        .rx-script-table td {
+          padding: 4px 16px 4px 0;
+          vertical-align: top;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+        .rx-code {
+          font-family: 'Courier New', monospace;
+          font-size: 11px;
+          color: #64748b;
+          margin-left: 4px;
         }
       `}</style>
     </div>
