@@ -69,7 +69,39 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
           </div>
         </header>
 
-        {/* Sections injected in Tasks 2-4 */}
+        <section className="rx-identity">
+          <div className="rx-col">
+            <h3 className="rx-section-label">Patient</h3>
+            <p className="rx-field-value rx-field-value-strong">{data.patient_name || '—'}</p>
+            {(data.patient_age != null || data.patient_gender) && (
+              <p className="rx-field-value rx-field-value-muted">
+                {data.patient_age != null ? `${data.patient_age} yrs` : ''}
+                {data.patient_age != null && data.patient_gender ? ' · ' : ''}
+                {data.patient_gender ?? ''}
+              </p>
+            )}
+          </div>
+          <div className="rx-col">
+            <h3 className="rx-section-label">Visit</h3>
+            {data.visit_date && (
+              <p className="rx-field-value">
+                <span className="rx-inline-label">Date:</span> {formatDate(data.visit_date)}
+              </p>
+            )}
+            {data.next_visit_date && (
+              <p className="rx-field-value">
+                <span className="rx-inline-label">Next Visit:</span> {formatDate(data.next_visit_date)}
+              </p>
+            )}
+          </div>
+        </section>
+
+        {data.chief_complaint && (
+          <section className="rx-block">
+            <h3 className="rx-section-label">Chief Complaint</h3>
+            <p className="rx-field-value">{data.chief_complaint}</p>
+          </section>
+        )}
       </div>
 
       <style jsx global>{`
@@ -131,6 +163,48 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
           margin: 2px 0 0 0;
           font-size: 10.5px;
           color: #64748b;
+        }
+        .rx-identity {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+          margin-bottom: 14px;
+        }
+        .rx-col {
+          min-width: 0;
+        }
+        .rx-section-label {
+          margin: 0 0 4px 0;
+          font-family: 'Helvetica', sans-serif;
+          font-size: 9.5px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #64748b;
+        }
+        .rx-field-value {
+          margin: 0 0 2px 0;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+        .rx-field-value-strong {
+          font-weight: 700;
+          font-size: 13.5px;
+        }
+        .rx-field-value-muted {
+          color: #475569;
+          font-size: 11px;
+        }
+        .rx-inline-label {
+          color: #64748b;
+          font-size: 11px;
+          font-family: 'Helvetica', sans-serif;
+          margin-right: 4px;
+        }
+        .rx-block {
+          padding: 10px 0;
+          border-top: 1px solid #e2e8f0;
+          margin-bottom: 4px;
         }
       `}</style>
     </div>
