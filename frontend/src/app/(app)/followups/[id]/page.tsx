@@ -6,20 +6,25 @@ import Link from 'next/link'
 import {
   ArrowLeft, User, FileText, Pill, Stethoscope,
   TrendingUp, History, StickyNote, AlertCircle,
-  Pencil, Trash2, X, Save,
+  Pencil, Trash2, X, Save, Printer,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { PrescriptionPrint, printPrescription, type PrintablePrescription } from '@/components/prescription/PrescriptionPrint'
 
 interface FollowupDetail {
   id: string
   case_id: string
   patient_id: string
   patient_name?: string
+  patient_first_name?: string | null
+  patient_last_name?: string | null
   patient_phone?: string | null
   patient_email?: string | null
   patient_age?: number | null
   patient_gender?: string | null
   doctor_name?: string
+  doctor_first_name?: string | null
+  doctor_last_name?: string | null
   case_chief_complaint?: string | null
   case_history?: string | null
   case_status?: string | null
@@ -104,6 +109,10 @@ export default function FollowupDetailPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  // Print
+  const [printData, setPrintData] = useState<PrintablePrescription | null>(null)
+  const [printError, setPrintError] = useState<string | null>(null)
+
   const reload = async () => {
     if (!id) return
     try {
@@ -183,6 +192,56 @@ export default function FollowupDetailPage() {
     }
   }
 
+  const handlePrintPrescription = () => {
+    if (!data) return
+    setPrintError(null)
+    try {
+      const doctorName = data.doctor_name?.trim()
+        || [data.doctor_first_name, data.doctor_last_name].filter(Boolean).join(' ').trim()
+      const patientName = data.patient_name?.trim()
+        || `${data.patient_first_name ?? ''} ${data.patient_last_name ?? ''}`.trim()
+      const mapped: PrintablePrescription = {
+        patient_name: patientName,
+        patient_age: data.patient_age ?? null,
+        patient_gender: data.patient_gender ?? null,
+        doctor_name: doctorName ? `Dr. ${doctorName}` : 'Doctor',
+        visit_date: data.visit_date ?? data.followup_date ?? null,
+        next_visit_date: data.next_visit_date ?? data.next_followup_date ?? null,
+        chief_complaint: data.case_chief_complaint ?? null,
+        diagnosis: data.diagnosis ?? null,
+        complaints: data.complaints ?? null,
+        remedy_name: data.remedy_name ?? null,
+        remedy_code: data.remedy_code ?? null,
+        potency: data.potency ?? null,
+        dosage: data.dosage ?? null,
+        repetition: data.repetition ?? null,
+        days: data.days ?? null,
+        prescription_type: data.prescription_type ?? null,
+        action_taken: data.action_taken ?? null,
+        remedy_response: data.remedy_response ?? null,
+        investigations: data.investigations ?? null,
+        examination: data.examination ?? null,
+        notes: data.notes ?? null,
+        generated_at: new Date(),
+      }
+      setPrintData(mapped)
+    } catch (err) {
+      setPrintError(err instanceof Error ? err.message : 'Failed to prepare prescription')
+    }
+  }
+
+  useEffect(() => {
+    if (!printData) return
+    const id = requestAnimationFrame(() => printPrescription())
+    return () => cancelAnimationFrame(id)
+  }, [printData])
+
+  useEffect(() => {
+    const onAfter = () => setPrintData(null)
+    window.addEventListener('afterprint', onAfter)
+    return () => window.removeEventListener('afterprint', onAfter)
+  }, [])
+
   if (loading) {
     return <div className="p-6 max-w-5xl mx-auto text-sm text-gray-500">Loading…</div>
   }
@@ -218,7 +277,13 @@ export default function FollowupDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">Follow-up Details</h1>
           <p className="text-gray-500 text-sm mt-0.5">Visit {fmtDate(visit)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handlePrintPrescription}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium"
+          >
+            <Printer className="w-4 h-4" /> Print Prescription
+          </button>
           <button
             onClick={() => setEditing({ ...data })}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-sm text-gray-700 hover:bg-gray-50"
@@ -234,6 +299,11 @@ export default function FollowupDetailPage() {
           </button>
         </div>
       </div>
+      {printError && (
+        <div className="mb-3 px-3 py-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded">
+          {printError}
+        </div>
+      )}
 
       <div className="space-y-4">
         {/* 1. Patient Information */}
@@ -341,6 +411,8 @@ export default function FollowupDetailPage() {
         </Section>
       </div>
 
+      {printData && <PrescriptionPrint data={printData} />}
+
       {/* Edit modal */}
       {editing && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -442,12 +514,22 @@ export default function FollowupDetailPage() {
                   className="w-full border rounded px-2 py-1.5" />
               </EditField>
             </div>
-            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t bg-gray-50">
-              <button onClick={() => setEditing(null)} className="px-3 py-1.5 border rounded-md text-sm hover:bg-gray-100">Cancel</button>
-              <button onClick={handleSaveEdit} disabled={saving}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-50">
-                <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save'}
+            <div className="flex items-center justify-between gap-2 px-5 py-3 border-t bg-gray-50">
+              <button
+                type="button"
+                onClick={handlePrintPrescription}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                title="Prints the last saved data — save first to print recent edits"
+              >
+                <Printer className="w-4 h-4" /> Print Prescription
               </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setEditing(null)} className="px-3 py-1.5 border rounded-md text-sm hover:bg-gray-100">Cancel</button>
+                <button onClick={handleSaveEdit} disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-50">
+                  <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
