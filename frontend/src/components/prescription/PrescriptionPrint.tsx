@@ -11,7 +11,7 @@ export type PrintablePrescription = {
 
   visit_date?: string | null
   next_visit_date?: string | null
-  generated_at?: Date
+  generated_at?: Date | string | null
 
   chief_complaint?: string | null
   diagnosis?: string | null
@@ -38,13 +38,16 @@ export function printPrescription(): void {
 
 function formatDate(s?: string | null): string {
   if (!s) return ''
-  const d = new Date(s)
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  const d = ymd
+    ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]))
+    : new Date(s)
   if (isNaN(d.getTime())) return s
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function formatDateTime(d?: Date): string {
-  const x = d ?? new Date()
+function formatDateTime(d?: Date | string | null): string {
+  const x = d == null ? new Date() : (typeof d === 'string' ? new Date(d) : d)
   return x.toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
@@ -117,7 +120,7 @@ export function PrescriptionPrint({ data }: { data: PrintablePrescription }) {
               {data.remedy_name && (
                 <tr>
                   <th>Remedy</th>
-                  <td>
+                  <td colSpan={3}>
                     <strong>{data.remedy_name}</strong>
                     {data.remedy_code != null && (
                       <span className="rx-code"> #{data.remedy_code}</span>
